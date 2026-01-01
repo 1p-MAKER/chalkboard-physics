@@ -1,0 +1,5 @@
+{
+    "title": "Chalkboard Physics",
+    "clearButton": "消去",
+    "description": "描いた線が物理的な壁となり、キャラクターの動きを制御します"
+}
