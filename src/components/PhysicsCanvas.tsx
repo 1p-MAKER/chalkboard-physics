@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, getRandomSpawnPosition } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, getRandomSpawnPosition } from '@/lib/entityFactory';
 import { useTranslation } from 'react-i18next';
 
 interface PhysicsCanvasProps {
@@ -19,6 +19,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const isDrawingRef = useRef(false);
     const lastPointRef = useRef<{ x: number; y: number } | null>(null);
     const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [isEraserMode, setIsEraserMode] = useState(false);
 
     const { t } = useTranslation();
 
@@ -69,7 +70,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         // エンティティの自動生成
         const spawnEntity = () => {
             const spawn = getRandomSpawnPosition(width, height);
-            const entity = createEntity(spawn.x, spawn.y);
+            // ランダムで丸型または人型を生成
+            const entity = Math.random() > 0.5
+                ? createEntity(spawn.x, spawn.y)
+                : createHumanoidEntity(spawn.x, spawn.y);
+
             Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
 
             World.add(engine.world, entity);
@@ -116,52 +121,90 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        isDrawingRef.current = true;
-        lastPointRef.current = { x, y };
+        if (isEraserMode) {
+            // 消しゴムモード: タップした位置の壁を削除
+            eraseAtPosition(x, y);
+        } else {
+            // 描画モード
+            isDrawingRef.current = true;
+            lastPointRef.current = { x, y };
+        }
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!isDrawingRef.current || !canvasRef.current || !engineRef.current) return;
+        if (!canvasRef.current || !engineRef.current) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (lastPointRef.current) {
-            const dx = x - lastPointRef.current.x;
-            const dy = y - lastPointRef.current.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+        if (isEraserMode) {
+            // 消しゴムモードではドラッグしながら消す
+            eraseAtPosition(x, y);
+        } else if (isDrawingRef.current) {
+            // 描画モード
+            if (lastPointRef.current) {
+                const dx = x - lastPointRef.current.x;
+                const dy = y - lastPointRef.current.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
 
-            // 線を補完して隙間をなくす
-            const segments = Math.max(1, Math.floor(distance / 10));
+                // 線を補完して隙間をなくす
+                const segments = Math.max(1, Math.floor(distance / 10));
 
-            for (let i = 0; i < segments; i++) {
-                const t = i / segments;
-                const px = lastPointRef.current.x + dx * t;
-                const py = lastPointRef.current.y + dy * t;
+                for (let i = 0; i < segments; i++) {
+                    const t = i / segments;
+                    const px = lastPointRef.current.x + dx * t;
+                    const py = lastPointRef.current.y + dy * t;
 
-                const wall = Matter.Bodies.circle(px, py, 5, {
-                    isStatic: true,
-                    restitution: 0.9,
-                    friction: 0.01,
-                    render: {
-                        fillStyle: '#ffffff', // 白いチョーク
-                        strokeStyle: '#ffffff',
-                        lineWidth: 1
-                    }
-                });
+                    const wall = Matter.Bodies.circle(px, py, 5, {
+                        isStatic: true,
+                        restitution: 0.9,
+                        friction: 0.01,
+                        render: {
+                            fillStyle: '#ffffff', // 白いチョーク
+                            strokeStyle: '#ffffff',
+                            lineWidth: 1
+                        }
+                    });
 
-                Matter.World.add(engineRef.current.world, wall);
-                wallsRef.current.push(wall);
+                    Matter.World.add(engineRef.current.world, wall);
+                    wallsRef.current.push(wall);
+                }
             }
-        }
 
-        lastPointRef.current = { x, y };
+            lastPointRef.current = { x, y };
+        }
     };
 
     const handlePointerUp = () => {
         isDrawingRef.current = false;
         lastPointRef.current = null;
+    };
+
+    // 消しゴム機能: 指定位置の壁を削除
+    const eraseAtPosition = (x: number, y: number) => {
+        if (!engineRef.current) return;
+
+        const eraseRadius = 20; // 消しゴムの範囲
+        const wallsToRemove: Matter.Body[] = [];
+
+        wallsRef.current.forEach(wall => {
+            const dx = wall.position.x - x;
+            const dy = wall.position.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < eraseRadius) {
+                wallsToRemove.push(wall);
+            }
+        });
+
+        wallsToRemove.forEach(wall => {
+            Matter.World.remove(engineRef.current!.world, wall);
+            const index = wallsRef.current.indexOf(wall);
+            if (index > -1) {
+                wallsRef.current.splice(index, 1);
+            }
+        });
     };
 
     // 消去機能
@@ -185,33 +228,60 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     width: '100%',
                     height: '100%',
                     touchAction: 'none', // スクロール防止
-                    cursor: 'crosshair'
+                    cursor: isEraserMode ? 'pointer' : 'crosshair'
                 }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
             />
-            <button
-                onClick={handleClear}
+            {/* ボタンコンテナ - 下部中央 */}
+            <div
                 style={{
                     position: 'absolute',
-                    top: '20px',
-                    right: '20px',
-                    padding: '12px 24px',
-                    fontSize: '16px',
-                    backgroundColor: '#2d5016',
-                    color: '#ffffff',
-                    border: '2px solid #ffffff',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 'bold',
-                    touchAction: 'manipulation' // ボタンと描画の排他制御
+                    bottom: '20px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'center'
                 }}
-                onPointerDown={(e) => e.stopPropagation()} // ボタン操作時にキャンバス描画を防止
             >
-                {t('clearButton')}
-            </button>
+                <button
+                    onClick={() => setIsEraserMode(!isEraserMode)}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: isEraserMode ? '#ffffff' : '#2d5016',
+                        color: isEraserMode ? '#2d5016' : '#ffffff',
+                        border: '2px solid #ffffff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    {isEraserMode ? '✏️ 描画' : '🧹 消しゴム'}
+                </button>
+                <button
+                    onClick={handleClear}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: '#2d5016',
+                        color: '#ffffff',
+                        border: '2px solid #ffffff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    {t('clearButton')}
+                </button>
+            </div>
         </div>
     );
 };

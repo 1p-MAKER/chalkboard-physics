@@ -5,7 +5,7 @@ import Matter from 'matter-js';
  * 丸い体に目と足を持つ可愛らしいデザイン
  */
 export function createEntity(x: number, y: number): Matter.Body {
-    const { Bodies, Body } = Matter;
+    const { Bodies } = Matter;
 
     // メインの体（円形）
     const bodyRadius = 20;
@@ -21,6 +21,93 @@ export function createEntity(x: number, y: number): Matter.Body {
     });
 
     return body;
+}
+
+/**
+ * 人型キャラクター（エンティティ）を生成する
+ * 頭、体、手、足で構成
+ */
+export function createHumanoidEntity(x: number, y: number): Matter.Body {
+    const { Bodies, Body } = Matter;
+
+    // 頭（円形）
+    const head = Bodies.circle(x, y - 25, 12, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 2
+        }
+    });
+
+    // 体（長方形）
+    const torso = Bodies.rectangle(x, y, 16, 30, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 2
+        }
+    });
+
+    // 手（2つの小さい円）
+    const leftHand = Bodies.circle(x - 12, y - 5, 5, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    const rightHand = Bodies.circle(x + 12, y - 5, 5, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    // 足（2つの小さい長方形）
+    const leftFoot = Bodies.rectangle(x - 6, y + 20, 6, 10, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    const rightFoot = Bodies.rectangle(x + 6, y + 20, 6, 10, {
+        restitution: 0.9,
+        friction: 0.01,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    // 全てのパーツを複合体として結合
+    const humanoid = Body.create({
+        parts: [torso, head, leftHand, rightHand, leftFoot, rightFoot],
+        restitution: 0.9,
+        friction: 0.01,
+    });
+
+    return humanoid;
 }
 
 /**
