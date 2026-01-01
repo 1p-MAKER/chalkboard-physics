@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
 import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition } from '@/lib/entityFactory';
-import { useTranslation } from 'react-i18next';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -29,21 +28,23 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const [isEraserMode, setIsEraserMode] = useState(false);
     const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
 
-    const { t } = useTranslation();
-
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        const canvas = canvasRef.current;
+        // Canvasのサイズを明示的に設定
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+
         // Matter.js エンジンとレンダラーの初期化
-        const { Engine, Render, Runner, World, Bodies, Query } = Matter;
+        const { Engine, Render, Runner, World, Bodies } = Matter;
 
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
         });
 
-        const canvas = canvasRef.current;
-        const width = canvas.clientWidth;
-        const height = canvas.clientHeight;
+        const width = canvas.width;
+        const height = canvas.height;
 
         const render = Render.create({
             canvas: canvas,
@@ -367,7 +368,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    {t('clearButton')}
+                    消去
                 </button>
             </div>
         </div>

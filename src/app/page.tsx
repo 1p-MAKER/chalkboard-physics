@@ -2,12 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { I18nextProvider } from 'react-i18next';
-import i18n from '@/i18n/config';
+import '../i18n/config';
 
 // PhysicsCanvasはクライアントサイドのみで動作させる
 const PhysicsCanvas = dynamic(() => import('@/components/PhysicsCanvas'), {
   ssr: false,
+  loading: () => (
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      backgroundColor: '#2d5016',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: '#ffffff'
+    }}>
+      Loading...
+    </div>
+  )
 });
 
 export default function Home() {
@@ -22,16 +34,20 @@ export default function Home() {
     setClearCount(prev => prev + 1);
   };
 
+  // クライアントサイドでマウント完了まで何も表示しない
   if (!mounted) {
-    return null; // SSR時は何も表示しない
+    return (
+      <div style={{
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: '#2d5016'
+      }} />
+    );
   }
 
   return (
-    <I18nextProvider i18n={i18n}>
-      <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
-        <PhysicsCanvas key={clearCount} onClear={handleClear} />
-      </div>
-    </I18nextProvider>
+    <div style={{ width: '100vw', height: '100vh', overflow: 'hidden' }}>
+      <PhysicsCanvas key={clearCount} onClear={handleClear} />
+    </div>
   );
 }
-
