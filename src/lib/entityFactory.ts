@@ -25,92 +25,97 @@ export function createEntity(x: number, y: number): Matter.Body {
 
 /**
  * 人型キャラクター（エンティティ）を生成する
- * 頭、体、手、足で構成
+ * 頭、体、手、足で構成、回転を防止して直立状態を維持
  */
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
     const { Bodies, Body } = Matter;
 
-    // 頭（円形）
-    const head = Bodies.circle(x, y - 25, 12, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
+    // 体全体を1つの長方形として作成（シンプルな人型）
+    const humanoid = Bodies.rectangle(x, y, 20, 50, {
+        restitution: 0.3,  // 低めの反発（安定性のため）
+        friction: 0.5,     // 適度な摩擦（地面との接触）
+        density: 0.002,
+        inertia: Infinity, // 回転を完全に防止
         render: {
             fillStyle: '#ffffff',
             strokeStyle: '#333333',
             lineWidth: 2
         }
-    });
-
-    // 体（長方形）
-    const torso = Bodies.rectangle(x, y, 16, 30, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
-        render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 2
-        }
-    });
-
-    // 手（2つの小さい円）
-    const leftHand = Bodies.circle(x - 12, y - 5, 5, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
-        render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
-        }
-    });
-
-    const rightHand = Bodies.circle(x + 12, y - 5, 5, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
-        render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
-        }
-    });
-
-    // 足（2つの小さい長方形）
-    const leftFoot = Bodies.rectangle(x - 6, y + 20, 6, 10, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
-        render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
-        }
-    });
-
-    const rightFoot = Bodies.rectangle(x + 6, y + 20, 6, 10, {
-        restitution: 0.9,
-        friction: 0.01,
-        density: 0.001,
-        render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
-        }
-    });
-
-    // 全てのパーツを複合体として結合
-    const humanoid = Body.create({
-        parts: [torso, head, leftHand, rightHand, leftFoot, rightFoot],
-        restitution: 0.9,
-        friction: 0.01,
     });
 
     // 人型キャラクター専用のカスタムデータを追加
     (humanoid as any).isHumanoid = true;
+    (humanoid as any).legPhase = 0; // 歩行アニメーション用
 
     return humanoid;
+}
+
+/**
+ * 人型キャラクターを描画（カスタムレンダリング）
+ */
+export function renderHumanoid(
+    context: CanvasRenderingContext2D,
+    humanoid: Matter.Body,
+    legPhase: number
+) {
+    const pos = humanoid.position;
+
+    context.save();
+    context.translate(pos.x, pos.y);
+
+    // 体（長方形）
+    context.fillStyle = '#ffffff';
+    context.strokeStyle = '#333333';
+    context.lineWidth = 2;
+    context.fillRect(-10, -25, 20, 50);
+    context.strokeRect(-10, -25, 20, 50);
+
+    // 頭（円）
+    context.beginPath();
+    context.arc(0, -35, 10, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+    // 目
+    context.fillStyle = '#333333';
+    context.beginPath();
+    context.arc(-3, -37, 2, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.arc(3, -37, 2, 0, Math.PI * 2);
+    context.fill();
+
+    // 歩行アニメーション用の足の位置計算
+    const leftLegOffset = Math.sin(legPhase) * 5;
+    const rightLegOffset = Math.sin(legPhase + Math.PI) * 5;
+
+    // 左足
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(-5, 25);
+    context.lineTo(-5 + leftLegOffset, 40);
+    context.stroke();
+
+    // 右足
+    context.beginPath();
+    context.moveTo(5, 25);
+    context.lineTo(5 + rightLegOffset, 40);
+    context.stroke();
+
+    // 左手
+    context.beginPath();
+    context.moveTo(-10, -10);
+    context.lineTo(-15 - leftLegOffset, 5);
+    context.stroke();
+
+    // 右手
+    context.beginPath();
+    context.moveTo(10, -10);
+    context.lineTo(15 - rightLegOffset, 5);
+    context.stroke();
+
+    context.restore();
 }
 
 /**

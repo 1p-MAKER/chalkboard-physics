@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -11,6 +11,7 @@ interface PhysicsCanvasProps {
 interface HumanoidData {
     body: Matter.Body;
     direction: number; // 1: right, -1: left
+    legPhase: number; // 歩行アニメーション用のフェーズ
 }
 
 const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
@@ -25,6 +26,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const lastPointRef = useRef<{ x: number; y: number } | null>(null);
     const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const animationFrameRef = useRef<number | null>(null);
     const [isEraserMode, setIsEraserMode] = useState(false);
     const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
 
@@ -37,7 +39,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         canvas.height = canvas.clientHeight;
 
         // Matter.js エンジンとレンダラーの初期化
-        const { Engine, Render, Runner, World, Bodies } = Matter;
+        const { Engine, Render, Runner, World, Bodies, Events } = Matter;
 
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
@@ -61,7 +63,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const ground = Bodies.rectangle(width / 2, height + 25, width, 50, {
             isStatic: true,
             restitution: 0.9,
-            friction: 0.01,
+            friction: 0.5, // 地面との摩擦を上げる
             render: { fillStyle: 'transparent' }
         });
 
@@ -75,6 +77,26 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         Render.run(render);
         Runner.run(runner, engine);
+
+        // カスタムレンダリング（人型キャラクターを個別に描画）
+        Events.on(render, 'afterRender', () => {
+            const context = render.context;
+
+            humanoidDataRef.current.forEach(humanoidData => {
+                const humanoid = humanoidData.body;
+
+                // Matter.jsのデフォルトレンダリングを消す
+                context.clearRect(
+                    humanoid.position.x - 30,
+                    humanoid.position.y - 60,
+                    60,
+                    120
+                );
+
+                // カスタムレンダリング
+                renderHumanoid(context, humanoid, humanoidData.legPhase);
+            });
+        });
 
         // エンティティの自動生成
         const spawnEntity = () => {
@@ -91,7 +113,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 entitiesRef.current.push(humanoid);
                 humanoidDataRef.current.push({
                     body: humanoid,
-                    direction: spawn.direction
+                    direction: spawn.direction,
+                    legPhase: 0
                 });
             } else {
                 // 丸型キャラクター - 左右上から出現
@@ -119,12 +142,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 if (!humanoid.position) return;
 
+                // 角度を強制的に0に保つ（直立状態維持）
+                Matter.Body.setAngle(humanoid, 0);
+
                 // 常に歩行方向に移動
                 const walkSpeed = 2;
                 Matter.Body.setVelocity(humanoid, {
                     x: direction * walkSpeed,
                     y: humanoid.velocity.y
                 });
+
+                // 歩行アニメーションのフェーズを更新
+                humanoidData.legPhase += 0.2;
 
                 // 前方の障害物検知（レイキャスト的な処理）
                 const checkDistance = 40;
@@ -144,15 +173,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 });
 
                 // 障害物があればジャンプ
-                if (obstacleDetected) {
-                    // ジャンプ力を上方向に加える
+                if (obstacleDetected && Math.abs(humanoid.velocity.y) < 0.1) {
+                    // ジャンプ力を上方向に加える（地面にいる時のみ）
                     Matter.Body.applyForce(humanoid, humanoid.position, {
-                        x: direction * 0.02, // 前方にも少し力を加える
-                        y: -0.08 // 上方向に大きな力
+                        x: direction * 0.01, // 前方にも少し力を加える
+                        y: -0.06 // 上方向に大きな力
                     });
+
+                    // ジャンプアニメーション用のフェーズをリセット
+                    humanoidData.legPhase = 0;
                 }
             });
-        }, 500); // より頻繁にチェック
+        }, 100); // より頻繁にチェック（アニメーションのため）
 
         // ライフサイクル管理：画面外のエンティティを削除
         const cleanupInterval = setInterval(() => {
@@ -177,6 +209,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
             if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
             clearInterval(cleanupInterval);
+            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             Render.stop(render);
             Runner.stop(runner);
             World.clear(engine.world, false);
@@ -231,7 +264,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     const wall = Matter.Bodies.circle(px, py, 5, {
                         isStatic: true,
                         restitution: 0.9,
-                        friction: 0.01,
+                        friction: 0.5,
                         render: {
                             fillStyle: '#ffffff', // 白いチョーク
                             strokeStyle: '#ffffff',
