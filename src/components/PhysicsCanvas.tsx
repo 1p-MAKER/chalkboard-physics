@@ -16,10 +16,13 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const runnerRef = useRef<Matter.Runner | null>(null);
     const wallsRef = useRef<Matter.Body[]>([]);
     const entitiesRef = useRef<Matter.Body[]>([]);
+    const humanoidEntitiesRef = useRef<Matter.Body[]>([]); // 人型キャラクター専用リスト
     const isDrawingRef = useRef(false);
     const lastPointRef = useRef<{ x: number; y: number } | null>(null);
     const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [isEraserMode, setIsEraserMode] = useState(false);
+    const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
 
     const { t } = useTranslation();
 
@@ -69,24 +72,57 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         // エンティティの自動生成
         const spawnEntity = () => {
+            if (!isSpawning) return;
+
             const spawn = getRandomSpawnPosition(width, height);
             // ランダムで丸型または人型を生成
-            const entity = Math.random() > 0.5
-                ? createEntity(spawn.x, spawn.y)
-                : createHumanoidEntity(spawn.x, spawn.y);
+            const isHumanoid = Math.random() > 0.5;
+            const entity = isHumanoid
+                ? createHumanoidEntity(spawn.x, spawn.y)
+                : createEntity(spawn.x, spawn.y);
 
             Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
 
             World.add(engine.world, entity);
             entitiesRef.current.push(entity);
+
+            if (isHumanoid) {
+                humanoidEntitiesRef.current.push(entity);
+            }
         };
 
         // ランダムなタイミングでエンティティを生成
         spawnIntervalRef.current = setInterval(() => {
-            if (Math.random() > 0.5) {
+            if (isSpawning && Math.random() > 0.5) {
                 spawnEntity();
             }
         }, 2000);
+
+        // 人型キャラクターのAI（歩行、ジャンプ）
+        aiIntervalRef.current = setInterval(() => {
+            humanoidEntitiesRef.current.forEach(humanoid => {
+                if (!humanoid.position) return;
+
+                // ランダムで行動を決定
+                const action = Math.random();
+
+                if (action < 0.3) {
+                    // 歩行（左または右に移動）
+                    const walkDirection = Math.random() > 0.5 ? 1 : -1;
+                    Matter.Body.setVelocity(humanoid, {
+                        x: walkDirection * 2,
+                        y: humanoid.velocity.y
+                    });
+                } else if (action < 0.5) {
+                    // ジャンプ
+                    Matter.Body.applyForce(humanoid, humanoid.position, {
+                        x: 0,
+                        y: -0.05
+                    });
+                }
+                // それ以外は何もしない（物理演算に任せる）
+            });
+        }, 1000);
 
         // ライフサイクル管理：画面外のエンティティを削除
         const cleanupInterval = setInterval(() => {
@@ -96,6 +132,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 if (isOutOfBounds) {
                     World.remove(engine.world, entity);
+                    // 人型リストからも削除
+                    const humanoidIndex = humanoidEntitiesRef.current.indexOf(entity);
+                    if (humanoidIndex > -1) {
+                        humanoidEntitiesRef.current.splice(humanoidIndex, 1);
+                    }
                     return false;
                 }
                 return true;
@@ -104,6 +145,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         return () => {
             if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
+            if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
             clearInterval(cleanupInterval);
             Render.stop(render);
             Runner.stop(runner);
@@ -111,7 +153,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             Engine.clear(engine);
             render.canvas.remove();
         };
-    }, []);
+    }, [isSpawning]);
 
     // 描画機能
     const handlePointerDown = (e: React.PointerEvent) => {
@@ -235,11 +277,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
             />
-            {/* ボタンコンテナ - 下部中央 */}
+            {/* ボタンコンテナ - 上部中央 */}
             <div
                 style={{
                     position: 'absolute',
-                    bottom: '20px',
+                    top: '20px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
@@ -247,6 +289,23 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     alignItems: 'center'
                 }}
             >
+                <button
+                    onClick={() => setIsSpawning(!isSpawning)}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: isSpawning ? '#2d5016' : '#ffffff',
+                        color: isSpawning ? '#ffffff' : '#2d5016',
+                        border: '2px solid #ffffff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
+                </button>
                 <button
                     onClick={() => setIsEraserMode(!isEraserMode)}
                     style={{
