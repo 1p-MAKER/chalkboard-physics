@@ -218,6 +218,42 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         };
     }, [isSpawning]);
 
+    // 人型キャラクターを手動で追加
+    const spawnHumanoid = () => {
+        if (!engineRef.current || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        const spawn = getHumanoidSpawnPosition(width, height);
+        const humanoid = createHumanoidEntity(spawn.x, spawn.y);
+
+        Matter.World.add(engineRef.current.world, humanoid);
+        entitiesRef.current.push(humanoid);
+        humanoidDataRef.current.push({
+            body: humanoid,
+            direction: spawn.direction,
+            legPhase: 0
+        });
+    };
+
+    // ボールを手動で追加
+    const spawnBall = () => {
+        if (!engineRef.current || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const width = canvas.width;
+        const height = canvas.height;
+
+        const spawn = getRandomSpawnPosition(width, height);
+        const entity = createEntity(spawn.x, spawn.y);
+        Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
+
+        Matter.World.add(engineRef.current.world, entity);
+        entitiesRef.current.push(entity);
+    };
+
     // 描画機能
     const handlePointerDown = (e: React.PointerEvent) => {
         if (!canvasRef.current || !engineRef.current) return;
@@ -349,7 +385,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     transform: 'translateX(-50%)',
                     display: 'flex',
                     gap: '12px',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    maxWidth: '90%'
                 }}
             >
                 <button
@@ -368,6 +407,40 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     onPointerDown={(e) => e.stopPropagation()}
                 >
                     {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
+                </button>
+                <button
+                    onClick={spawnHumanoid}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: '#2d5016',
+                        color: '#ffffff',
+                        border: '2px solid #ffffff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    🚶 人を追加
+                </button>
+                <button
+                    onClick={spawnBall}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: '#2d5016',
+                        color: '#ffffff',
+                        border: '2px solid #ffffff',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    ⚽ ボールを追加
                 </button>
                 <button
                     onClick={() => setIsEraserMode(!isEraserMode)}
