@@ -107,11 +107,15 @@ export function createHumanoidEntity(x: number, y: number): Matter.Body {
         friction: 0.01,
     });
 
+    // 人型キャラクター専用のカスタムデータを追加
+    (humanoid as any).isHumanoid = true;
+
     return humanoid;
 }
 
 /**
  * 左右または上からランダムにエンティティを生成する位置を決定
+ * （丸型キャラクター用）
  */
 export function getRandomSpawnPosition(
     canvasWidth: number,
@@ -142,6 +146,33 @@ export function getRandomSpawnPosition(
             y: -30,
             vx: 0,
             vy: 0
+        };
+    }
+}
+
+/**
+ * 人型キャラクター専用のスポーン位置を決定
+ * 左右からのみ、地面に立った状態で出現
+ */
+export function getHumanoidSpawnPosition(
+    canvasWidth: number,
+    canvasHeight: number
+): { x: number; y: number; direction: number } {
+    const fromLeft = Math.random() > 0.5;
+
+    if (fromLeft) {
+        // 左から歩いてくる
+        return {
+            x: -50,
+            y: canvasHeight - 80, // 地面近く
+            direction: 1 // 右向きに歩く
+        };
+    } else {
+        // 右から歩いてくる
+        return {
+            x: canvasWidth + 50,
+            y: canvasHeight - 80, // 地面近く
+            direction: -1 // 左向きに歩く
         };
     }
 }

@@ -2,11 +2,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, getRandomSpawnPosition } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition } from '@/lib/entityFactory';
 import { useTranslation } from 'react-i18next';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
+}
+
+interface HumanoidData {
+    body: Matter.Body;
+    direction: number; // 1: right, -1: left
 }
 
 const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
@@ -16,7 +21,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const runnerRef = useRef<Matter.Runner | null>(null);
     const wallsRef = useRef<Matter.Body[]>([]);
     const entitiesRef = useRef<Matter.Body[]>([]);
-    const humanoidEntitiesRef = useRef<Matter.Body[]>([]); // 人型キャラクター専用リスト
+    const humanoidDataRef = useRef<HumanoidData[]>([]); // 人型キャラクター専用リスト（方向情報付き）
     const isDrawingRef = useRef(false);
     const lastPointRef = useRef<{ x: number; y: number } | null>(null);
     const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -30,7 +35,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         if (!canvasRef.current) return;
 
         // Matter.js エンジンとレンダラーの初期化
-        const { Engine, Render, Runner, World, Bodies } = Matter;
+        const { Engine, Render, Runner, World, Bodies, Query } = Matter;
 
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
@@ -74,20 +79,27 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const spawnEntity = () => {
             if (!isSpawning) return;
 
-            const spawn = getRandomSpawnPosition(width, height);
-            // ランダムで丸型または人型を生成
             const isHumanoid = Math.random() > 0.5;
-            const entity = isHumanoid
-                ? createHumanoidEntity(spawn.x, spawn.y)
-                : createEntity(spawn.x, spawn.y);
-
-            Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
-
-            World.add(engine.world, entity);
-            entitiesRef.current.push(entity);
 
             if (isHumanoid) {
-                humanoidEntitiesRef.current.push(entity);
+                // 人型キャラクター - 左右から出現
+                const spawn = getHumanoidSpawnPosition(width, height);
+                const humanoid = createHumanoidEntity(spawn.x, spawn.y);
+
+                World.add(engine.world, humanoid);
+                entitiesRef.current.push(humanoid);
+                humanoidDataRef.current.push({
+                    body: humanoid,
+                    direction: spawn.direction
+                });
+            } else {
+                // 丸型キャラクター - 左右上から出現
+                const spawn = getRandomSpawnPosition(width, height);
+                const entity = createEntity(spawn.x, spawn.y);
+                Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
+
+                World.add(engine.world, entity);
+                entitiesRef.current.push(entity);
             }
         };
 
@@ -98,44 +110,61 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             }
         }, 2000);
 
-        // 人型キャラクターのAI（歩行、ジャンプ）
+        // 人型キャラクターの高度なAI（障害物検知、歩行、ジャンプ）
         aiIntervalRef.current = setInterval(() => {
-            humanoidEntitiesRef.current.forEach(humanoid => {
+            humanoidDataRef.current.forEach(humanoidData => {
+                const humanoid = humanoidData.body;
+                const direction = humanoidData.direction;
+
                 if (!humanoid.position) return;
 
-                // ランダムで行動を決定
-                const action = Math.random();
+                // 常に歩行方向に移動
+                const walkSpeed = 2;
+                Matter.Body.setVelocity(humanoid, {
+                    x: direction * walkSpeed,
+                    y: humanoid.velocity.y
+                });
 
-                if (action < 0.3) {
-                    // 歩行（左または右に移動）
-                    const walkDirection = Math.random() > 0.5 ? 1 : -1;
-                    Matter.Body.setVelocity(humanoid, {
-                        x: walkDirection * 2,
-                        y: humanoid.velocity.y
-                    });
-                } else if (action < 0.5) {
-                    // ジャンプ
+                // 前方の障害物検知（レイキャスト的な処理）
+                const checkDistance = 40;
+                const checkX = humanoid.position.x + (direction * checkDistance);
+                const checkY = humanoid.position.y;
+
+                // 前方に壁があるか確認
+                let obstacleDetected = false;
+                wallsRef.current.forEach(wall => {
+                    const dx = wall.position.x - checkX;
+                    const dy = wall.position.y - checkY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < 30) {
+                        obstacleDetected = true;
+                    }
+                });
+
+                // 障害物があればジャンプ
+                if (obstacleDetected) {
+                    // ジャンプ力を上方向に加える
                     Matter.Body.applyForce(humanoid, humanoid.position, {
-                        x: 0,
-                        y: -0.05
+                        x: direction * 0.02, // 前方にも少し力を加える
+                        y: -0.08 // 上方向に大きな力
                     });
                 }
-                // それ以外は何もしない（物理演算に任せる）
             });
-        }, 1000);
+        }, 500); // より頻繁にチェック
 
         // ライフサイクル管理：画面外のエンティティを削除
         const cleanupInterval = setInterval(() => {
             entitiesRef.current = entitiesRef.current.filter(entity => {
                 const pos = entity.position;
-                const isOutOfBounds = pos.x < -100 || pos.x > width + 100 || pos.y > height + 100;
+                const isOutOfBounds = pos.x < -200 || pos.x > width + 200 || pos.y > height + 200;
 
                 if (isOutOfBounds) {
                     World.remove(engine.world, entity);
                     // 人型リストからも削除
-                    const humanoidIndex = humanoidEntitiesRef.current.indexOf(entity);
+                    const humanoidIndex = humanoidDataRef.current.findIndex(h => h.body === entity);
                     if (humanoidIndex > -1) {
-                        humanoidEntitiesRef.current.splice(humanoidIndex, 1);
+                        humanoidDataRef.current.splice(humanoidIndex, 1);
                     }
                     return false;
                 }
