@@ -25,22 +25,64 @@ export function createEntity(x: number, y: number): Matter.Body {
 
 /**
  * 人型キャラクター（エンティティ）を生成する
- * 頭、体、手、足で構成、回転を防止して直立状態を維持
+ * 頭、体、足で構成された複合体、回転を防止して直立状態を維持
  */
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
-    const { Bodies, Body } = Matter;
+    const { Bodies, Body, Composite, Constraint } = Matter;
 
-    // 体全体を1つの長方形として作成（シンプルな人型）
-    const humanoid = Bodies.rectangle(x, y, 20, 50, {
-        restitution: 0.3,  // 低めの反発（安定性のため）
-        friction: 0.5,     // 適度な摩擦（地面との接触）
-        density: 0.002,
-        inertia: Infinity, // 回転を完全に防止
+    // 各パーツを作成
+    // 頭（円形）
+    const head = Bodies.circle(x, y - 30, 10, {
+        restitution: 0.3,
+        friction: 0.5,
+        density: 0.001,
         render: {
             fillStyle: '#ffffff',
             strokeStyle: '#333333',
             lineWidth: 2
         }
+    });
+
+    // 胴体（長方形）
+    const torso = Bodies.rectangle(x, y, 16, 30, {
+        restitution: 0.3,
+        friction: 0.5,
+        density: 0.002,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 2
+        }
+    });
+
+    // 左足（小さい長方形）
+    const leftLeg = Bodies.rectangle(x - 6, y + 20, 6, 10, {
+        restitution: 0.3,
+        friction: 0.5,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    // 右足（小さい長方形）
+    const rightLeg = Bodies.rectangle(x + 6, y + 20, 6, 10, {
+        restitution: 0.3,
+        friction: 0.5,
+        density: 0.001,
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#333333',
+            lineWidth: 1
+        }
+    });
+
+    // 複合体として結合（回転を防止）
+    const humanoid = Body.create({
+        parts: [torso, head, leftLeg, rightLeg],
+        inertia: Infinity, // 回転を完全に防止
     });
 
     // 人型キャラクター専用のカスタムデータを追加
@@ -67,22 +109,22 @@ export function renderHumanoid(
     context.fillStyle = '#ffffff';
     context.strokeStyle = '#333333';
     context.lineWidth = 2;
-    context.fillRect(-10, -25, 20, 50);
-    context.strokeRect(-10, -25, 20, 50);
+    context.fillRect(-8, -15, 16, 30);
+    context.strokeRect(-8, -15, 16, 30);
 
     // 頭（円）
     context.beginPath();
-    context.arc(0, -35, 10, 0, Math.PI * 2);
+    context.arc(0, -30, 10, 0, Math.PI * 2);
     context.fill();
     context.stroke();
 
     // 目
     context.fillStyle = '#333333';
     context.beginPath();
-    context.arc(-3, -37, 2, 0, Math.PI * 2);
+    context.arc(-3, -32, 2, 0, Math.PI * 2);
     context.fill();
     context.beginPath();
-    context.arc(3, -37, 2, 0, Math.PI * 2);
+    context.arc(3, -32, 2, 0, Math.PI * 2);
     context.fill();
 
     // 歩行アニメーション用の足の位置計算
@@ -90,29 +132,28 @@ export function renderHumanoid(
     const rightLegOffset = Math.sin(legPhase + Math.PI) * 5;
 
     // 左足
+    context.fillStyle = '#ffffff';
+    context.strokeStyle = '#333333';
+    context.lineWidth = 2;
+    context.fillRect(-9 + leftLegOffset, 15, 6, 10);
+    context.strokeRect(-9 + leftLegOffset, 15, 6, 10);
+
+    // 右足
+    context.fillRect(3 + rightLegOffset, 15, 6, 10);
+    context.strokeRect(3 + rightLegOffset, 15, 6, 10);
+
+    // 左手
     context.strokeStyle = '#ffffff';
     context.lineWidth = 3;
     context.beginPath();
-    context.moveTo(-5, 25);
-    context.lineTo(-5 + leftLegOffset, 40);
-    context.stroke();
-
-    // 右足
-    context.beginPath();
-    context.moveTo(5, 25);
-    context.lineTo(5 + rightLegOffset, 40);
-    context.stroke();
-
-    // 左手
-    context.beginPath();
-    context.moveTo(-10, -10);
-    context.lineTo(-15 - leftLegOffset, 5);
+    context.moveTo(-8, -5);
+    context.lineTo(-13 - leftLegOffset, 5);
     context.stroke();
 
     // 右手
     context.beginPath();
-    context.moveTo(10, -10);
-    context.lineTo(15 - rightLegOffset, 5);
+    context.moveTo(8, -5);
+    context.lineTo(13 - rightLegOffset, 5);
     context.stroke();
 
     context.restore();
