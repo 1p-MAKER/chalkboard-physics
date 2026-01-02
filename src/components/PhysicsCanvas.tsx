@@ -115,6 +115,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
         });
 
+        // 物理演算更新前の処理
+        Events.on(engine, 'beforeUpdate', () => {
+            // ハシゴの回転を防止（常に縦向き）
+            const bodies = Matter.Composite.allBodies(engine.world);
+            bodies.forEach(body => {
+                if (body.label === 'Ladder') {
+                    Matter.Body.setAngle(body, 0);
+                    Matter.Body.setAngularVelocity(body, 0);
+                }
+            });
+        });
+
         // エンティティの自動生成
         const spawnEntity = () => {
             if (!isSpawning) return;

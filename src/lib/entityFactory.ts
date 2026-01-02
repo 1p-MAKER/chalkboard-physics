@@ -183,6 +183,7 @@ export function createLadderEntity(x: number, y: number): Matter.Body {
         restitution: 0.2,
         friction: 0.5,
         density: 0.005,
+        inertia: Infinity, // 回転ロック（慣性モーメントを無限大に）
         label: 'Ladder'
     });
 
