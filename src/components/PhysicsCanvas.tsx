@@ -475,6 +475,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         cursor: 'pointer',
         fontWeight: 'bold' as const,
         touchAction: 'manipulation' as const,
+        userSelect: 'none' as const,
+        WebkitUserSelect: 'none' as const,
+        WebkitTouchCallout: 'none' as const, // iOSで長押しメニューを出さない
         flexShrink: 0,
         whiteSpace: 'nowrap' as const,
         boxShadow: '0 4px 8px rgba(0,0,0,0.3)', // 影を強く
