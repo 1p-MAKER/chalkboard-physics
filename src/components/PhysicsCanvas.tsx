@@ -73,8 +73,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         World.add(engine.world, [ground]);
         wallsRef.current.push(ground);
 
-        // 雲と泡は一時的に無効化（座標計算バグの疑いあり）
-        /*
         // 雲を配置（上空の障害物）
         for (let i = 0; i < 5; i++) {
             const cloudX = Math.random() * width;
@@ -92,7 +90,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             World.add(engine.world, bubble);
             entitiesRef.current.push(bubble);
         }
-        */
         renderRef.current = render;
 
         // マウス操作（グラブ）の設定
@@ -325,19 +322,40 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
         }, 3000);
 
+        // リサイズ監視
+        const resizeObserver = new ResizeObserver(() => {
+            if (!canvas || !render || !engine) return;
+            const newWidth = canvas.clientWidth || window.innerWidth;
+            const newHeight = canvas.clientHeight || window.innerHeight;
+
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+            render.options.width = newWidth;
+            render.options.height = newHeight;
+            render.bounds.max.x = newWidth;
+            render.bounds.max.y = newHeight;
+        });
+        resizeObserver.observe(canvas);
+
         return () => {
             if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
             if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
             clearInterval(cleanupInterval);
+            resizeObserver.disconnect();
+
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
             Render.stop(render);
             Runner.stop(runner);
+
+            // 重要: World.clearは行うが、Engine.clearだけにする。
+            // render.canvas.remove() はReactが管理するDOMを破壊するので削除してはいけない。
             World.clear(engine.world, false);
             Engine.clear(engine);
-            render.canvas.remove();
+
+            // イベントリスナーの解除などはMatterが管理していれば不要だが、
+            // ReactのStrict Modeでの二重起動を防ぐためにもクリーンアップは重要
         };
     }, [isSpawning]);
-
     // カーソルモード変更時の副作用
     useEffect(() => {
         if (!engineRef.current || !mouseConstraintRef.current) return;
