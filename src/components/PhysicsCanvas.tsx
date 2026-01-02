@@ -229,10 +229,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 }
                 data.legPhase += 0.2;
 
-                // Jump logic
+                // Jump logic (Obstacle)
                 const isBlockedFront = Query.point(wallsRef.current, { x: body.position.x + data.direction * 50, y: body.position.y }).length > 0;
                 if (isBlockedFront && Math.abs(body.velocity.y) < 0.1) {
                     Matter.Body.applyForce(body, body.position, { x: data.direction * 0.04, y: -0.12 });
+                } else if (Math.random() < 0.02 && Math.abs(body.velocity.y) < 0.1) {
+                    // Random Jump (2% probability)
+                    Matter.Body.applyForce(body, body.position, {
+                        x: 0,
+                        y: -0.08 // Slightly weaker than obstacle jump
+                    });
                 }
             });
         }, 100);
