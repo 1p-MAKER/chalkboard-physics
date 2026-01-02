@@ -28,18 +28,16 @@ export function createEntity(x: number, y: number): Matter.Body {
  * 頭、体、足で構成された複合体、回転を防止して直立状態を維持
  */
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
-    const { Bodies, Body, Composite, Constraint } = Matter;
+    const { Bodies, Body } = Matter;
 
-    // 各パーツを作成
+    // 各パーツを作成（visible: falseでMatter.jsのデフォルトレンダリングを無効化）
     // 頭（円形）
     const head = Bodies.circle(x, y - 30, 10, {
         restitution: 0.3,
         friction: 0.5,
         density: 0.001,
         render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 2
+            visible: false // カスタムレンダリングのみ使用
         }
     });
 
@@ -49,9 +47,7 @@ export function createHumanoidEntity(x: number, y: number): Matter.Body {
         friction: 0.5,
         density: 0.002,
         render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 2
+            visible: false // カスタムレンダリングのみ使用
         }
     });
 
@@ -61,9 +57,7 @@ export function createHumanoidEntity(x: number, y: number): Matter.Body {
         friction: 0.5,
         density: 0.001,
         render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
+            visible: false // カスタムレンダリングのみ使用
         }
     });
 
@@ -73,9 +67,7 @@ export function createHumanoidEntity(x: number, y: number): Matter.Body {
         friction: 0.5,
         density: 0.001,
         render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
-            lineWidth: 1
+            visible: false // カスタムレンダリングのみ使用
         }
     });
 
