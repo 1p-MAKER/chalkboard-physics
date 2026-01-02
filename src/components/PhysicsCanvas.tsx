@@ -373,11 +373,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
             />
-            {/* ボタンコンテナ - 上部中央 */}
+            {/* ボタンコンテナ - 上部中央（ノッチを避ける） */}
             <div
                 style={{
                     position: 'absolute',
-                    top: '10px',
+                    top: '50px', // ノッチを避けるため下に移動
                     left: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
