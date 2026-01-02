@@ -12,6 +12,7 @@ interface HumanoidData {
     body: Matter.Body;
     direction: number; // 1: right, -1: left
     legPhase: number; // 歩行アニメーション用のフェーズ
+    stuckCounter: number; // 行き止まり検知用カウンター
 }
 
 const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
@@ -111,7 +112,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 humanoidDataRef.current.push({
                     body: humanoid,
                     direction: spawn.direction,
-                    legPhase: 0
+                    legPhase: 0,
+                    stuckCounter: 0
                 });
             } else {
                 // 丸型キャラクター - 左右上から出現
@@ -148,6 +150,28 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     x: direction * walkSpeed,
                     y: humanoid.velocity.y
                 });
+
+                // 行き止まり検知：移動速度が極端に低い場合
+                const actualSpeed = Math.abs(humanoid.velocity.x);
+                if (actualSpeed < 0.5 && Math.abs(humanoid.velocity.y) < 0.1) {
+                    // 地上にいて、ほとんど動いていない = 詰まっている
+                    humanoidData.stuckCounter = (humanoidData.stuckCounter || 0) + 1;
+
+                    // 一定時間詰まったら方向転換
+                    if (humanoidData.stuckCounter > 30) { // 約3秒
+                        humanoidData.direction *= -1; // 方向転換
+                        humanoidData.stuckCounter = 0; //カウンターリセット
+
+                        // 方向転換時に少しジャンプして脱出を試みる
+                        Matter.Body.applyForce(humanoid, humanoid.position, {
+                            x: humanoidData.direction * 0.03,
+                            y: -0.1
+                        });
+                    }
+                } else {
+                    // 順調に動いている場合はカウンターリセット
+                    humanoidData.stuckCounter = 0;
+                }
 
                 // 歩行アニメーションのフェーズを更新
                 humanoidData.legPhase += 0.2;
@@ -231,7 +255,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         humanoidDataRef.current.push({
             body: humanoid,
             direction: spawn.direction,
-            legPhase: 0
+            legPhase: 0,
+            stuckCounter: 0
         });
     };
 
