@@ -176,8 +176,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     Matter.Body.setVelocity(h, body.velocity);
                 }
 
-                // Anti-gravity for floating objects (clouds, drawings, BUBBLES)
-                if ((body as any).isFloating || (body as any).isBubble) {
+                // Anti-gravity for floating objects (clouds, drawings, BUBBLES, LADDER TOP)
+                if ((body as any).isFloating || (body as any).isBubble || (body as any).isOnLadderTop) {
                     Matter.Body.applyForce(body, body.position, {
                         x: 0,
                         y: -engine.gravity.y * engine.gravity.scale * body.mass
@@ -194,19 +194,42 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 // Ladder logic
                 let isClimbing = false;
+                let isOnLadderTop = false;
                 const ladders = entitiesRef.current.filter(e => e.label === 'Ladder');
+
                 for (const ladder of ladders) {
                     if (Matter.Bounds.overlaps(body.bounds, ladder.bounds)) {
-                        isClimbing = true;
-                        // Avoid ceiling
-                        let headBlocked = Query.point(wallsRef.current, { x: body.position.x, y: body.position.y - 40 }).length > 0;
-                        const vY = headBlocked ? 2 : -1.5;
-                        Matter.Body.setVelocity(body, { x: (ladder.position.x - body.position.x) * 0.1, y: vY });
-                        data.legPhase += 0.2;
+
+                        // Check if at the top (Virtual Floor)
+                        // Ladder Top Y is bounds.min.y. Body H is 40 (center -20). 
+                        // If body.y < min.y + 30, we consider them "on top" or "exiting".
+                        if (body.position.y < ladder.bounds.min.y + 30) {
+                            isOnLadderTop = true;
+                            // Allow walking on top
+                            // We don't set isClimbing=true here, so the main walk logic below triggers!
+                            // But we need to neutalize Y velocity drift? 
+                            // Anti-gravity in beforeUpdate handles the force, 
+                            // but we should damp Y velocity here to prevent bouncing.
+                            Matter.Body.setVelocity(body, { x: body.velocity.x, y: body.velocity.y * 0.5 });
+                        } else {
+                            // Normal Climbing
+                            isClimbing = true;
+                            // Avoid ceiling
+                            let headBlocked = Query.point(wallsRef.current, { x: body.position.x, y: body.position.y - 30 }).length > 0;
+                            const vY = headBlocked ? 2 : -1.5;
+                            Matter.Body.setVelocity(body, {
+                                x: (ladder.position.x - body.position.x) * 0.2, // Stronger alignment
+                                y: vY
+                            });
+                            data.legPhase += 0.2;
+                        }
                         break;
                     }
                 }
+
+                (body as any).isOnLadderTop = isOnLadderTop;
                 data.isClimbing = isClimbing;
+
                 if (isClimbing) {
                     Matter.Body.setAngle(body, 0);
                     return;
