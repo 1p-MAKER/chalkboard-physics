@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, createLadderEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -260,6 +260,20 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         });
     };
 
+    // ハシゴを手動で追加
+    const spawnLadder = () => {
+        if (!engineRef.current || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const width = canvas.width;
+
+        // 画面中央上部から少し下にスポーン
+        const ladder = createLadderEntity(width / 2, 200);
+
+        Matter.World.add(engineRef.current.world, ladder);
+        entitiesRef.current.push(ladder);
+    };
+
     // ボールを手動で追加
     const spawnBall = () => {
         if (!engineRef.current || !canvasRef.current) return;
@@ -311,15 +325,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 const dy = y - lastPointRef.current.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                // 線を補完して隙間をなくす
-                const segments = Math.max(1, Math.floor(distance / 10));
+                // 線を補完して隙間をなくす（より高密度に：5px間隔）
+                const segments = Math.max(1, Math.floor(distance / 5));
 
                 for (let i = 0; i < segments; i++) {
                     const t = i / segments;
                     const px = lastPointRef.current.x + dx * t;
                     const py = lastPointRef.current.y + dy * t;
 
-                    const wall = Matter.Bodies.circle(px, py, 5, {
+                    // チョーク風のランダムなズレを加える
+                    const offset = (Math.random() - 0.5) * 2;
+
+                    const wall = Matter.Bodies.circle(px + offset, py + offset, 4, {
                         isStatic: true,
                         restitution: 0.9,
                         friction: 0.5,

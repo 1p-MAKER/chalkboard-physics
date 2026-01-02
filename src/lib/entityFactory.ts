@@ -144,6 +144,52 @@ export function renderHumanoid(
 }
 
 /**
+ * ハシゴ（エンティティ）を生成する
+ * 複数のパーツで構成された動的な物理オブジェクト
+ */
+export function createLadderEntity(x: number, y: number): Matter.Body {
+    const { Bodies, Body } = Matter;
+
+    const width = 60;
+    const height = 180;
+    const railWidth = 6;
+    const rungHeight = 5;
+    const rungCount = 6;
+
+    const parts = [];
+
+    // 左のレール
+    parts.push(Bodies.rectangle(x - width / 2 + railWidth / 2, y, railWidth, height, {
+        render: { fillStyle: '#ffffff' }
+    }));
+
+    // 右のレール
+    parts.push(Bodies.rectangle(x + width / 2 - railWidth / 2, y, railWidth, height, {
+        render: { fillStyle: '#ffffff' }
+    }));
+
+    // 横桟（ラング）
+    const step = height / (rungCount + 1);
+    for (let i = 1; i <= rungCount; i++) {
+        const py = y - height / 2 + step * i;
+        parts.push(Bodies.rectangle(x, py, width - railWidth * 2, rungHeight, {
+            render: { fillStyle: '#ffffff' }
+        }));
+    }
+
+    // 複合体を作成
+    const ladder = Body.create({
+        parts: parts,
+        restitution: 0.2,
+        friction: 0.5,
+        density: 0.005,
+        label: 'Ladder'
+    });
+
+    return ladder;
+}
+
+/**
  * 左右または上からランダムにエンティティを生成する位置を決定
  * （丸型キャラクター用）
  */
