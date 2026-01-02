@@ -203,6 +203,12 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                     // ジャンプアニメーション用のフェーズをリセット
                     humanoidData.legPhase = 0;
+                } else if (Math.random() < 0.02 && Math.abs(humanoid.velocity.y) < 0.1) {
+                    // ランダムジャンプ（2%の確率で小ジャンプ）
+                    Matter.Body.applyForce(humanoid, humanoid.position, {
+                        x: 0,
+                        y: -0.08 // 障害物ジャンプより少し弱め
+                    });
                 }
             });
         }, 100); // より頻繁にチェック（アニメーションのため）
