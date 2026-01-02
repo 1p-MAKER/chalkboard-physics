@@ -13,9 +13,9 @@ export function createEntity(x: number, y: number): MatterJS.Body {
     // メインの体（円形） - サイズを50%縮小 (20 -> 10)
     const bodyRadius = 10;
 
-    // ランダムなパステルカラー
+    // ランダムなパステルカラー（色味を強調）
     const hue = Math.floor(Math.random() * 360);
-    const color = `hsl(${hue}, 70%, 80%)`;
+    const color = `hsl(${hue}, 90%, 60%)`;
 
     const body = MatterJS.Bodies.circle(x, y, bodyRadius, {
         restitution: 0.9,  // 高反発
@@ -42,12 +42,15 @@ export function createEntity(x: number, y: number): MatterJS.Body {
 export function createCloudEntity(x: number, y: number): MatterJS.Body {
     const { Bodies, Body } = MatterJS;
 
+    // 各パーツに明示的に白色を指定しないと、Matter.jsがランダムカラーを割り当てる場合がある
+    const cloudStyle = { fillStyle: '#ffffff', strokeStyle: '#dddddd', lineWidth: 1 };
+
     const parts = [
-        Bodies.circle(x, y, 30),
-        Bodies.circle(x - 25, y + 10, 25),
-        Bodies.circle(x + 25, y + 10, 25),
-        Bodies.circle(x - 15, y - 15, 20),
-        Bodies.circle(x + 15, y - 15, 20)
+        Bodies.circle(x, y, 30, { render: cloudStyle }),
+        Bodies.circle(x - 25, y + 10, 25, { render: cloudStyle }),
+        Bodies.circle(x + 25, y + 10, 25, { render: cloudStyle }),
+        Bodies.circle(x - 15, y - 15, 20, { render: cloudStyle }),
+        Bodies.circle(x + 15, y - 15, 20, { render: cloudStyle })
     ];
 
     const cloud = Body.create({
