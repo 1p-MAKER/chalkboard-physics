@@ -141,6 +141,26 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         // AI & floating logic
         Events.on(engine, 'beforeUpdate', () => {
             const bodies = Matter.Composite.allBodies(engine.world);
+            const humanoids = bodies.filter(b => (b as any).isHumanoid);
+            const bubbles = bodies.filter(b => (b as any).isBubble);
+
+            // Bubble capture logic
+            humanoids.forEach(h => {
+                if ((h as any).inBubble) return; // すでに中ならスキップ
+
+                for (const b of bubbles) {
+                    if ((b as any).containedEntity) continue; // 満員ならスキップ
+
+                    const dist = Matter.Vector.magnitude(Matter.Vector.sub(h.position, b.position));
+                    if (dist < 25) { // 衝突判定（小型化に合わせて調整）
+                        (h as any).inBubble = true;
+                        (b as any).containedEntity = h;
+                        h.collisionFilter.mask = 0x0001; // 地面(CATEGORY_DEFAULT)のみと衝突するように
+                        break;
+                    }
+                }
+            });
+
             bodies.forEach(body => {
                 // Keep ladders upright
                 if (body.label === 'Ladder') {
@@ -148,8 +168,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     Matter.Body.setAngularVelocity(body, 0);
                 }
 
-                // Anti-gravity for floating objects (clouds, drawings)
-                if ((body as any).isFloating) {
+                // Bubble carrying logic
+                if ((body as any).isBubble && (body as any).containedEntity) {
+                    const h = (body as any).containedEntity;
+                    // 小人を泡の真ん中に固定
+                    Matter.Body.setPosition(h, body.position);
+                    Matter.Body.setVelocity(h, body.velocity);
+                }
+
+                // Anti-gravity for floating objects (clouds, drawings, BUBBLES)
+                if ((body as any).isFloating || (body as any).isBubble) {
                     Matter.Body.applyForce(body, body.position, {
                         x: 0,
                         y: -engine.gravity.y * engine.gravity.scale * body.mass
@@ -162,7 +190,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const aiInterval = setInterval(() => {
             humanoidDataRef.current.forEach(data => {
                 const body = data.body;
-                if (!body.position) return;
+                if (!body.position || (body as any).inBubble) return; // 泡の中ならAI停止
 
                 // Ladder logic
                 let isClimbing = false;

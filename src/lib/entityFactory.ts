@@ -100,6 +100,8 @@ export function createBubbleEntity(x: number, y: number): MatterJS.Body {
 
     // カスタムプロパティ：上昇フラグ
     (bubble as any).isBubble = true;
+    (bubble as any).bubbleCapacity = 1; // 1人まで入れる
+    (bubble as any).containedEntity = null;
 
     return bubble;
 }
@@ -109,9 +111,9 @@ export function createBubbleEntity(x: number, y: number): MatterJS.Body {
  * 1つの長方形として実装、カスタムレンダリングで可愛い人型に見せる
  */
 export function createHumanoidEntity(x: number, y: number): MatterJS.Body {
-    // 人型（1つの長方形）- 2.5頭身くらいの可愛いプロポーション
-    const humanoid = MatterJS.Bodies.rectangle(x, y, 30, 60, {
-        restitution: 0.3,
+    // 人型（1つの長方形）- さらに小さく可愛いサイズ (20x40)
+    const humanoid = MatterJS.Bodies.rectangle(x, y, 20, 40, {
+        restitution: 0.2,
         friction: 0.8,
         density: 0.002,
         inertia: Infinity, // 回転防止
@@ -128,14 +130,15 @@ export function createHumanoidEntity(x: number, y: number): MatterJS.Body {
     (humanoid as any).isHumanoid = true;
     (humanoid as any).legPhase = 0;
     (humanoid as any).direction = 1;
-    (humanoid as any).isClimbing = false; // 登り状態フラグ
+    (humanoid as any).isClimbing = false;
+    (humanoid as any).inBubble = false; // 泡に入っているフラグ
 
     return humanoid;
 }
 
 /**
  * 人型キャラクターを描画（カスタムレンダリング）
- * 可愛らしい2.5頭身キャラクター
+ * 小型化に合わせて各数値を調整
  */
 export function renderHumanoid(
     context: CanvasRenderingContext2D,
@@ -151,127 +154,106 @@ export function renderHumanoid(
 
     if (isClimbing) {
         // 登り状態（背中）
-        // 体（丸みのある長方形）
         context.fillStyle = '#ffffff';
         context.strokeStyle = '#333333';
-        context.lineWidth = 2;
+        context.lineWidth = 1.5;
         context.beginPath();
-        context.roundRect(-8, -5, 16, 25, 8);
-        context.fill();
-        context.stroke();
-
-        // 頭（後ろ姿なので目はなし）
-        const headRadius = 12;
-        context.beginPath();
-        context.arc(0, -22, headRadius, 0, Math.PI * 2);
-        context.fill();
-        context.stroke();
-
-        // リュック？あるいはシンプルな背中
-        context.fillStyle = '#eeeeee';
-        context.beginPath();
-        context.roundRect(-5, -5, 10, 18, 4);
-        context.fill();
-        context.stroke();
-
-        // 手足のアニメーション（登っている動き）
-        const climbOffset = Math.sin(legPhase * 2) * 4;
-
-        context.strokeStyle = '#ffffff';
-        context.lineWidth = 4;
-
-        // 足
-        context.beginPath();
-        context.moveTo(-4, 20);
-        context.lineTo(-4, 32 - climbOffset);
-        context.stroke();
-
-        context.beginPath();
-        context.moveTo(4, 20);
-        context.lineTo(4, 32 + climbOffset);
-        context.stroke();
-
-        // 手（バンザイ）
-        context.lineWidth = 3;
-        context.beginPath();
-        context.moveTo(-8, 0);
-        context.lineTo(-12, -15 + climbOffset);
-        context.stroke();
-
-        context.beginPath();
-        context.moveTo(8, 0);
-        context.lineTo(12, -15 - climbOffset);
-        context.stroke();
-
-    } else {
-        // 通常状態（正面または横）
-
-        // 体
-        context.fillStyle = '#ffffff';
-        context.strokeStyle = '#333333';
-        context.lineWidth = 2;
-        context.beginPath();
-        context.roundRect(-8, -5, 16, 25, 8);
+        context.roundRect(-6, -2, 12, 18, 6);
         context.fill();
         context.stroke();
 
         // 頭
-        const headRadius = 12;
+        const headRadius = 8;
         context.beginPath();
-        context.arc(0, -22, headRadius, 0, Math.PI * 2);
+        context.arc(0, -14, headRadius, 0, Math.PI * 2);
         context.fill();
         context.stroke();
 
-        // 目
+        // 手足のアニメーション
+        const climbOffset = Math.sin(legPhase * 2) * 3;
+        context.strokeStyle = '#ffffff';
+        context.lineWidth = 3;
+
+        // 足
+        context.beginPath();
+        context.moveTo(-3, 15);
+        context.lineTo(-3, 22 - climbOffset);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(3, 15);
+        context.lineTo(3, 22 + climbOffset);
+        context.stroke();
+
+        // 手
+        context.lineWidth = 2.5;
+        context.beginPath();
+        context.moveTo(-6, 2);
+        context.lineTo(-9, -8 + climbOffset);
+        context.stroke();
+        context.beginPath();
+        context.moveTo(6, 2);
+        context.lineTo(9, -8 - climbOffset);
+        context.stroke();
+
+    } else {
+        // 通常状態
+        // 体
+        context.fillStyle = '#ffffff';
+        context.strokeStyle = '#333333';
+        context.lineWidth = 1.5;
+        context.beginPath();
+        context.roundRect(-6, -2, 12, 18, 6);
+        context.fill();
+        context.stroke();
+
+        // 頭
+        const headRadius = 8;
+        context.beginPath();
+        context.arc(0, -14, headRadius, 0, Math.PI * 2);
+        context.fill();
+        context.stroke();
+
+        // 目（より可愛く大きめに）
         context.fillStyle = '#333333';
         context.beginPath();
-        context.arc(-4, -24, 2.5, 0, Math.PI * 2);
+        context.arc(-direction * 3, -15, 2, 0, Math.PI * 2);
         context.fill();
         context.beginPath();
-        context.arc(4, -24, 2.5, 0, Math.PI * 2);
+        context.arc(direction * 3, -15, 2, 0, Math.PI * 2);
         context.fill();
 
         // 笑顔
         context.strokeStyle = '#333333';
-        context.lineWidth = 1.5;
+        context.lineWidth = 1;
         context.beginPath();
-        context.arc(0, -20, 5, 0.2, Math.PI - 0.2);
+        context.arc(0, -12, 4, 0.3, Math.PI - 0.3);
         context.stroke();
 
-        // ほっぺた
-        context.fillStyle = '#ffcccc';
-        context.beginPath();
-        context.arc(-8, -19, 2, 0, Math.PI * 2);
-        context.fill();
-        context.beginPath();
-        context.arc(8, -19, 2, 0, Math.PI * 2);
-        context.fill();
-
-        // 手足（歩行）
-        const leftLegOffset = Math.sin(legPhase) * 4;
-        const rightLegOffset = Math.sin(legPhase + Math.PI) * 4;
-
+        // 歩行
+        const leftLegOffset = Math.sin(legPhase) * 3;
+        const rightLegOffset = Math.sin(legPhase + Math.PI) * 3;
         context.strokeStyle = '#ffffff';
-        context.lineWidth = 4;
+        context.lineWidth = 3;
+
         // 足
         context.beginPath();
-        context.moveTo(-4, 20);
-        context.lineTo(-4 + leftLegOffset, 32);
+        context.moveTo(-3, 15);
+        context.lineTo(-3 + leftLegOffset, 22);
         context.stroke();
         context.beginPath();
-        context.moveTo(4, 20);
-        context.lineTo(4 + rightLegOffset, 32);
+        context.moveTo(3, 15);
+        context.lineTo(3 + rightLegOffset, 22);
         context.stroke();
 
         // 手
-        context.lineWidth = 3;
+        context.lineWidth = 2.5;
         context.beginPath();
-        context.moveTo(-8, 0);
-        context.lineTo(-12 - rightLegOffset, 8);
+        context.moveTo(-6, 2);
+        context.lineTo(-9 - rightLegOffset, 8);
         context.stroke();
         context.beginPath();
-        context.moveTo(8, 0);
-        context.lineTo(12 - leftLegOffset, 8);
+        context.moveTo(6, 2);
+        context.lineTo(9 - leftLegOffset, 8);
         context.stroke();
     }
 
@@ -280,7 +262,7 @@ export function renderHumanoid(
 
 /**
  * ハシゴ（エンティティ）を生成する
- * 複数のパーツで構成された動的な物理オブジェクト
+ * 上部の当たり判定を完全に平らにする
  */
 export function createLadderEntity(x: number, y: number): MatterJS.Body {
     const width = 60;
@@ -290,22 +272,22 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
     const rungCount = 6;
 
     const parts = [];
-
-    // パーツごとのcollisionFilter設定も必要
     const filter = {
         category: CATEGORY_LADDER,
-        mask: CATEGORY_DEFAULT // 壁(0x0001)とは衝突するが、DYNAMIC(0x0002)とは衝突しない
+        mask: CATEGORY_DEFAULT
     };
 
-    const topBarHeight = 5;
+    const topBarHeight = 8; // 少し厚めにして安定させる
 
-    // トップバー（一番上の平らな部分）
-    parts.push(MatterJS.Bodies.rectangle(x, y - height / 2 + topBarHeight / 2, width, topBarHeight, {
+    // トップバー（一番上の平らな台）
+    const topBar = MatterJS.Bodies.rectangle(x, y - height / 2 + topBarHeight / 2, width, topBarHeight, {
         render: { fillStyle: '#ffffff' },
-        collisionFilter: filter
-    }));
+        collisionFilter: filter,
+        label: 'LadderTop'
+    });
+    parts.push(topBar);
 
-    // レールの高さ調整（トップバーの下から伸びる）
+    // レール（支柱）がトップバーから突き出ないように高さを調整
     const railHeight = height - topBarHeight;
     const railY = y + topBarHeight / 2;
 
@@ -321,12 +303,11 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
         collisionFilter: filter
     }));
 
-    // 横桟（ラング） - トップバーを除くスペースに等間隔
+    // 横桟
     const availableHeight = height - topBarHeight;
     const step = availableHeight / (rungCount + 1);
 
     for (let i = 1; i <= rungCount; i++) {
-        // トップバーの下から配置開始
         const py = (y - height / 2 + topBarHeight) + step * i;
         parts.push(MatterJS.Bodies.rectangle(x, py, width - railWidth * 2, rungHeight, {
             render: { fillStyle: '#ffffff' },
@@ -334,13 +315,12 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
         }));
     }
 
-    // 複合体を作成
     const ladder = MatterJS.Body.create({
         parts: parts,
-        restitution: 0.2,
+        restitution: 0.1,
         friction: 0.5,
         density: 0.005,
-        inertia: Infinity, // 回転ロック
+        inertia: Infinity,
         collisionFilter: filter,
         label: 'Ladder'
     });
