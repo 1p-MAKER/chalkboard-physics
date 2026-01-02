@@ -2,7 +2,16 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, createLadderEntity, createCloudEntity, createBubbleEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
+import {
+    createEntity,
+    createHumanoidEntity,
+    createLadderEntity,
+    createCloudEntity,
+    createBubbleEntity,
+    getRandomSpawnPosition,
+    getHumanoidSpawnPosition,
+    renderHumanoid
+} from '@/lib/entityFactory';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -11,44 +20,58 @@ interface PhysicsCanvasProps {
 interface HumanoidData {
     body: Matter.Body;
     direction: number; // 1: right, -1: left
-    legPhase: number; // 歩行アニメーション用のフェーズ
-    stuckCounter: number; // 行き止まり検知用カウンター
-    isClimbing?: boolean; // ハシゴ登り状態
+    legPhase: number;
+    stuckCounter: number;
+    isClimbing?: boolean;
 }
 
 const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Matter.js Refs
     const engineRef = useRef<Matter.Engine | null>(null);
     const renderRef = useRef<Matter.Render | null>(null);
     const runnerRef = useRef<Matter.Runner | null>(null);
+    const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null);
+
+    // Logic Refs
     const wallsRef = useRef<Matter.Body[]>([]);
     const entitiesRef = useRef<Matter.Body[]>([]);
-    const humanoidDataRef = useRef<HumanoidData[]>([]); // 人型キャラクター専用リスト（方向情報付き）
+    const humanoidDataRef = useRef<HumanoidData[]>([]);
+    const currentStrokeBodiesRef = useRef<Matter.Body[]>([]);
+
     const isDrawingRef = useRef(false);
     const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-    const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const animationFrameRef = useRef<number | null>(null);
-    const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null);
-    const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
-    const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
+    const isSpawningRef = useRef(true);
 
+    // React State (UI only)
+    const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
+    const [isSpawning, setIsSpawning] = useState(true);
+
+    // Toggle Spawning
+    const toggleSpawning = () => {
+        const newState = !isSpawning;
+        setIsSpawning(newState);
+        isSpawningRef.current = newState;
+    };
+
+    // Initialize Engine (Mount Once)
     useEffect(() => {
         if (!canvasRef.current) return;
 
+        const { Engine, Render, Runner, World, Bodies, Events, MouseConstraint, Mouse, Query } = Matter;
         const canvas = canvasRef.current;
-        // Canvasのサイズを明示的に設定（フォールバック付き）
         const width = canvas.clientWidth || window.innerWidth;
         const height = canvas.clientHeight || window.innerHeight;
+
         canvas.width = width;
         canvas.height = height;
-
-        // Matter.js エンジンとレンダラーの初期化
-        const { Engine, Render, Runner, World, Bodies, Events, MouseConstraint, Mouse } = Matter;
 
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
         });
+        engineRef.current = engine;
 
         const render = Render.create({
             canvas: canvas,
@@ -57,58 +80,48 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 width,
                 height,
                 wireframes: false,
-                background: '#2d5016', // 黒板の緑色
+                background: '#2d5016', // Chalkboard Green
             }
         });
+        renderRef.current = render;
 
-        // 壁（床）
-        const ground = Bodies.rectangle(width / 2, height + 10, width, 60, {
+        // Ground (Visible)
+        const groundHeight = 80;
+        const ground = Bodies.rectangle(width / 2, height - (groundHeight / 2) + 10, width, groundHeight, {
             isStatic: true,
-            render: { fillStyle: '#ffffff' },
-            collisionFilter: {
-                category: 0x0001,
-                mask: 0xFFFFFFFF
+            label: 'Ground',
+            render: {
+                fillStyle: '#ffffff',
+                strokeStyle: '#dddddd',
+                lineWidth: 2
             }
         });
         World.add(engine.world, [ground]);
         wallsRef.current.push(ground);
 
-        // 雲を配置（上空の障害物）
-        for (let i = 0; i < 5; i++) {
-            const cloudX = Math.random() * width;
-            const cloudY = Math.random() * (height / 3); // 上部1/3に配置
-            const cloud = createCloudEntity(cloudX, cloudY);
+        // Initial Environment
+        for (let i = 0; i < 4; i++) {
+            const cloud = createCloudEntity(Math.random() * width, Math.random() * (height / 3));
             World.add(engine.world, cloud);
             entitiesRef.current.push(cloud);
         }
-
-        // 泡を配置（浮遊物）
-        for (let i = 0; i < 8; i++) {
-            const bubbleX = Math.random() * width;
-            const bubbleY = Math.random() * height;
-            const bubble = createBubbleEntity(bubbleX, bubbleY);
+        for (let i = 0; i < 6; i++) {
+            const bubble = createBubbleEntity(Math.random() * width, Math.random() * height);
             World.add(engine.world, bubble);
             entitiesRef.current.push(bubble);
         }
-        renderRef.current = render;
 
-        // マウス操作（グラブ）の設定
+        // Mouse/Touch Constraint for 'Grab' mode
         const mouse = Mouse.create(render.canvas);
         const mouseConstraint = MouseConstraint.create(engine, {
             mouse: mouse,
             constraint: {
                 stiffness: 0.2,
-                render: {
-                    visible: false
-                }
+                render: { visible: false }
             }
         });
         mouseConstraintRef.current = mouseConstraint;
-
-        // 初期モードに応じた設定
-        if (cursorMode === 'grab') {
-            World.add(engine.world, mouseConstraint);
-        }
+        // Note: We'll add/remove this from world based on mode in a separate useEffect
 
         const runner = Runner.create();
         runnerRef.current = runner;
@@ -116,32 +129,26 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         Render.run(render);
         Runner.run(runner, engine);
 
-        // カスタムレンダリング（人型キャラクターを個別に描画）
+        // Rendering Loop for Humanoids
         Events.on(render, 'afterRender', () => {
             const context = render.context;
-
-            humanoidDataRef.current.forEach(humanoidData => {
-                const humanoid = humanoidData.body;
-
-                // カスタムレンダリング
-                renderHumanoid(context, humanoid, humanoidData.legPhase, humanoidData.direction, humanoidData.isClimbing || false);
+            if (!context) return;
+            humanoidDataRef.current.forEach(data => {
+                renderHumanoid(context, data.body, data.legPhase, data.direction, data.isClimbing || false);
             });
         });
 
-        // 物理演算更新前の処理
+        // AI & floating logic
         Events.on(engine, 'beforeUpdate', () => {
-            // グラブモードでない場合、マウス制約を無効化（bodyBをnullにするなど）
-            // しかし追加/削除の方が確実なので、useEffect([cursorMode])で行う
-
             const bodies = Matter.Composite.allBodies(engine.world);
             bodies.forEach(body => {
-                // ハシゴの回転を防止（常に縦向き）
+                // Keep ladders upright
                 if (body.label === 'Ladder') {
                     Matter.Body.setAngle(body, 0);
                     Matter.Body.setAngularVelocity(body, 0);
                 }
 
-                // 浮遊エンティティ（雲、描画など）の重力打ち消し
+                // Anti-gravity for floating objects (clouds, drawings)
                 if ((body as any).isFloating) {
                     Matter.Body.applyForce(body, body.position, {
                         x: 0,
@@ -151,621 +158,284 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
         });
 
-        // エンティティの自動生成
-        const spawnEntity = () => {
-            if (!isSpawning) return;
+        // AI Tick
+        const aiInterval = setInterval(() => {
+            humanoidDataRef.current.forEach(data => {
+                const body = data.body;
+                if (!body.position) return;
 
-            const isHumanoid = Math.random() > 0.5;
-
-            if (isHumanoid) {
-                // 人型キャラクター - 左右から出現
-                const spawn = getHumanoidSpawnPosition(width, height);
-                const humanoid = createHumanoidEntity(spawn.x, spawn.y);
-
-                World.add(engine.world, humanoid);
-                entitiesRef.current.push(humanoid);
-                humanoidDataRef.current.push({
-                    body: humanoid,
-                    direction: spawn.direction,
-                    legPhase: 0,
-                    stuckCounter: 0
-                });
-            } else {
-                // 丸型キャラクター - 左右上から出現
-                const spawn = getRandomSpawnPosition(width, height);
-                const entity = createEntity(spawn.x, spawn.y);
-                Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
-
-                World.add(engine.world, entity);
-                entitiesRef.current.push(entity);
-            }
-        };
-
-        // ランダムなタイミングでエンティティを生成
-        spawnIntervalRef.current = setInterval(() => {
-            if (isSpawning && Math.random() > 0.5) {
-                spawnEntity();
-            }
-        }, 2000);
-
-        // 人型キャラクターの高度なAI（障害物検知、歩行、ジャンプ）
-        aiIntervalRef.current = setInterval(() => {
-            humanoidDataRef.current.forEach(humanoidData => {
-                const humanoid = humanoidData.body;
-                const direction = humanoidData.direction;
-
-                if (!humanoid.position) return;
-
-                // ハシゴ検知と登り動作
+                // Ladder logic
                 let isClimbing = false;
                 const ladders = entitiesRef.current.filter(e => e.label === 'Ladder');
-
                 for (const ladder of ladders) {
-                    if (Matter.Bounds.overlaps(humanoid.bounds, ladder.bounds)) {
+                    if (Matter.Bounds.overlaps(body.bounds, ladder.bounds)) {
                         isClimbing = true;
-
-                        // 頭上の障害物チェック
-                        let headBlocked = false;
-                        const checkHeadX = humanoid.position.x;
-                        const checkHeadY = humanoid.position.y - 40; // 頭上
-
-                        // 壁との衝突判定（簡易）
-                        wallsRef.current.forEach(wall => {
-                            const dx = wall.position.x - checkHeadX;
-                            const dy = wall.position.y - checkHeadY;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            if (distance < 30) { // 壁の半径にもよるが、近ければブロックとみなす
-                                headBlocked = true;
-                            }
-                        });
-
-                        // ハシゴに吸い寄せられながら登る（または降りる）
-                        const climbSpeed = headBlocked ? 2.0 : -1.5; // ブロック時は降りる(正)、通常は登る(負)
-
-                        Matter.Body.setVelocity(humanoid, {
-                            x: (ladder.position.x - humanoid.position.x) * 0.1,
-                            y: climbSpeed
-                        });
-
-                        // 登りアニメーション更新
-                        humanoidData.legPhase += 0.2;
+                        // Avoid ceiling
+                        let headBlocked = Query.point(wallsRef.current, { x: body.position.x, y: body.position.y - 40 }).length > 0;
+                        const vY = headBlocked ? 2 : -1.5;
+                        Matter.Body.setVelocity(body, { x: (ladder.position.x - body.position.x) * 0.1, y: vY });
+                        data.legPhase += 0.2;
                         break;
                     }
                 }
-
-                humanoidData.isClimbing = isClimbing;
-
+                data.isClimbing = isClimbing;
                 if (isClimbing) {
-                    // ハシゴ登り中は他の動きをキャンセル
-                    // 角度維持
-                    Matter.Body.setAngle(humanoid, 0);
+                    Matter.Body.setAngle(body, 0);
                     return;
                 }
 
-                // 角度を強制的に0に保つ（直立状態維持）
-                Matter.Body.setAngle(humanoid, 0);
+                // Walk logic
+                Matter.Body.setAngle(body, 0);
+                Matter.Body.setVelocity(body, { x: data.direction * 2, y: body.velocity.y });
 
-                // 常に歩行方向に移動
-                const walkSpeed = 2;
-                Matter.Body.setVelocity(humanoid, {
-                    x: direction * walkSpeed,
-                    y: humanoid.velocity.y
-                });
-
-                // 行き止まり検知：移動速度が極端に低い場合
-                const actualSpeed = Math.abs(humanoid.velocity.x);
-                if (actualSpeed < 0.5 && Math.abs(humanoid.velocity.y) < 0.1) {
-                    // 地上にいて、ほとんど動いていない = 詰まっている
-                    humanoidData.stuckCounter = (humanoidData.stuckCounter || 0) + 1;
-
-                    // 一定時間詰まったら方向転換
-                    if (humanoidData.stuckCounter > 30) { // 約3秒
-                        humanoidData.direction *= -1; // 方向転換
-                        humanoidData.stuckCounter = 0; //カウンターリセット
-
-                        // 方向転換時に少しジャンプして脱出を試みる
-                        Matter.Body.applyForce(humanoid, humanoid.position, {
-                            x: humanoidData.direction * 0.03,
-                            y: -0.1
-                        });
+                // Stuck detection
+                if (Math.abs(body.velocity.x) < 0.5 && Math.abs(body.velocity.y) < 0.1) {
+                    data.stuckCounter++;
+                    if (data.stuckCounter > 30) {
+                        data.direction *= -1;
+                        data.stuckCounter = 0;
+                        Matter.Body.applyForce(body, body.position, { x: data.direction * 0.03, y: -0.1 });
                     }
                 } else {
-                    // 順調に動いている場合はカウンターリセット
-                    humanoidData.stuckCounter = 0;
+                    data.stuckCounter = 0;
                 }
+                data.legPhase += 0.2;
 
-                // 歩行アニメーションのフェーズを更新
-                humanoidData.legPhase += 0.2;
-
-                // 前方の障害物検知（レイキャスト的な処理）
-                const checkDistance = 60;
-                const checkX = humanoid.position.x + (direction * checkDistance);
-                const checkY = humanoid.position.y;
-
-                // 前方に壁があるか確認
-                let obstacleDetected = false;
-                wallsRef.current.forEach(wall => {
-                    const dx = wall.position.x - checkX;
-                    const dy = wall.position.y - checkY;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < 50) {
-                        obstacleDetected = true;
-                    }
-                });
-
-                // 障害物があればジャンプ
-                if (obstacleDetected && Math.abs(humanoid.velocity.y) < 0.1) {
-                    // ジャンプ力を上方向に加える（地面にいる時のみ）
-                    Matter.Body.applyForce(humanoid, humanoid.position, {
-                        x: direction * 0.04, // 前方にも少し力を加える
-                        y: -0.12 // 上方向に大きな力
-                    });
-
-                    // ジャンプアニメーション用のフェーズをリセット
-                    humanoidData.legPhase = 0;
-                } else if (Math.random() < 0.02 && Math.abs(humanoid.velocity.y) < 0.1) {
-                    // ランダムジャンプ（2%の確率で小ジャンプ）
-                    Matter.Body.applyForce(humanoid, humanoid.position, {
-                        x: 0,
-                        y: -0.08 // 障害物ジャンプより少し弱め
-                    });
+                // Jump logic
+                const isBlockedFront = Query.point(wallsRef.current, { x: body.position.x + data.direction * 50, y: body.position.y }).length > 0;
+                if (isBlockedFront && Math.abs(body.velocity.y) < 0.1) {
+                    Matter.Body.applyForce(body, body.position, { x: data.direction * 0.04, y: -0.12 });
                 }
             });
-        }, 100); // より頻繁にチェック（アニメーションのため）
+        }, 100);
 
-        // ライフサイクル管理：画面外のエンティティを削除
+        // Spawn Tick
+        const spawnInterval = setInterval(() => {
+            if (!isSpawningRef.current) return;
+            if (Math.random() > 0.4) {
+                const isHumanoid = Math.random() > 0.5;
+                if (isHumanoid) {
+                    const spawn = getHumanoidSpawnPosition(width, height);
+                    const body = createHumanoidEntity(spawn.x, spawn.y);
+                    World.add(engine.world, body);
+                    entitiesRef.current.push(body);
+                    humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0 });
+                } else {
+                    const spawn = getRandomSpawnPosition(width, height);
+                    const body = createEntity(spawn.x, spawn.y);
+                    Matter.Body.setVelocity(body, { x: spawn.vx, y: spawn.vy });
+                    World.add(engine.world, body);
+                    entitiesRef.current.push(body);
+                }
+            }
+        }, 2000);
+
+        // Cleanup Tick
         const cleanupInterval = setInterval(() => {
-            entitiesRef.current = entitiesRef.current.filter(entity => {
-                const pos = entity.position;
-                const isOutOfBounds = pos.x < -200 || pos.x > width + 200 || pos.y > height + 200;
-
-                if (isOutOfBounds) {
-                    World.remove(engine.world, entity);
-                    // 人型リストからも削除
-                    const humanoidIndex = humanoidDataRef.current.findIndex(h => h.body === entity);
-                    if (humanoidIndex > -1) {
-                        humanoidDataRef.current.splice(humanoidIndex, 1);
-                    }
+            entitiesRef.current = entitiesRef.current.filter(body => {
+                if (body.position.y > height + 200 || body.position.x < -200 || body.position.x > width + 200) {
+                    World.remove(engine.world, body);
+                    const idx = humanoidDataRef.current.findIndex(d => d.body === body);
+                    if (idx > -1) humanoidDataRef.current.splice(idx, 1);
                     return false;
                 }
                 return true;
             });
-        }, 3000);
+        }, 5000);
 
-        // リサイズ監視
-        const resizeObserver = new ResizeObserver(() => {
-            if (!canvas || !render || !engine) return;
-            const newWidth = canvas.clientWidth || window.innerWidth;
-            const newHeight = canvas.clientHeight || window.innerHeight;
-
-            canvas.width = newWidth;
-            canvas.height = newHeight;
-            render.options.width = newWidth;
-            render.options.height = newHeight;
-            render.bounds.max.x = newWidth;
-            render.bounds.max.y = newHeight;
+        // Resize
+        const ob = new ResizeObserver(() => {
+            const w = canvas.clientWidth || window.innerWidth;
+            const h = canvas.clientHeight || window.innerHeight;
+            canvas.width = w;
+            canvas.height = h;
+            render.options.width = w;
+            render.options.height = h;
+            Matter.Body.setPosition(ground, { x: w / 2, y: h - (groundHeight / 2) + 10 });
         });
-        resizeObserver.observe(canvas);
+        ob.observe(canvas);
 
         return () => {
-            if (spawnIntervalRef.current) clearInterval(spawnIntervalRef.current);
-            if (aiIntervalRef.current) clearInterval(aiIntervalRef.current);
+            clearInterval(aiInterval);
+            clearInterval(spawnInterval);
             clearInterval(cleanupInterval);
-            resizeObserver.disconnect();
-
-            if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            ob.disconnect();
             Render.stop(render);
             Runner.stop(runner);
-
-            // 重要: World.clearは行うが、Engine.clearだけにする。
-            // render.canvas.remove() はReactが管理するDOMを破壊するので削除してはいけない。
             World.clear(engine.world, false);
             Engine.clear(engine);
-
-            // イベントリスナーの解除などはMatterが管理していれば不要だが、
-            // ReactのStrict Modeでの二重起動を防ぐためにもクリーンアップは重要
         };
-    }, [isSpawning]);
-    // カーソルモード変更時の副作用
+    }, []);
+
+    // Mode Sidebar Side-effect
     useEffect(() => {
         if (!engineRef.current || !mouseConstraintRef.current) return;
-
-        const world = engineRef.current.world;
-        const mouseConstraint = mouseConstraintRef.current;
-
         if (cursorMode === 'grab') {
-            Matter.World.add(world, mouseConstraint);
+            Matter.World.add(engineRef.current.world, mouseConstraintRef.current);
         } else {
-            Matter.World.remove(world, mouseConstraint);
+            Matter.World.remove(engineRef.current.world, mouseConstraintRef.current);
         }
     }, [cursorMode]);
 
-    // 人型キャラクターを手動で追加
-    const spawnHumanoid = () => {
-        if (!engineRef.current || !canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const width = canvas.width;
-        const height = canvas.height;
-
-        const spawn = getHumanoidSpawnPosition(width, height);
-        const humanoid = createHumanoidEntity(spawn.x, spawn.y);
-
-        Matter.World.add(engineRef.current.world, humanoid);
-        entitiesRef.current.push(humanoid);
-        humanoidDataRef.current.push({
-            body: humanoid,
-            direction: spawn.direction,
-            legPhase: 0,
-            stuckCounter: 0
-        });
-    };
-
-    // ハシゴを手動で追加
-    const spawnLadder = () => {
-        if (!engineRef.current || !canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const width = canvas.width;
-
-        // 画面中央上部から少し下にスポーン
-        const ladder = createLadderEntity(width / 2, 200);
-
-        Matter.World.add(engineRef.current.world, ladder);
-        entitiesRef.current.push(ladder);
-    };
-
-    // ボールを手動で追加
-    const spawnBall = () => {
-        if (!engineRef.current || !canvasRef.current) return;
-
-        const canvas = canvasRef.current;
-        const width = canvas.width;
-        const height = canvas.height;
-
-        const spawn = getRandomSpawnPosition(width, height);
-        const entity = createEntity(spawn.x, spawn.y);
-        Matter.Body.setVelocity(entity, { x: spawn.vx, y: spawn.vy });
-
-        Matter.World.add(engineRef.current.world, entity);
-        entitiesRef.current.push(entity);
-    };
-
-    // 描画機能
+    // Handlers
     const handlePointerDown = (e: React.PointerEvent) => {
         if (!canvasRef.current || !engineRef.current) return;
-
-        // ポインターキャプチャを設定: 画面外に出ても操作を継続
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
-
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (cursorMode === 'grab') {
-            // グラブモード時はMatter.jsのmouseConstraintが処理するため、ここでは何もしない
-            return;
-        } else if (cursorMode === 'eraser') {
-            // 消しゴムモード: タップした位置の壁を削除
-            eraseAtPosition(x, y);
-            isDrawingRef.current = true; // ドラッグ消去を有効化
-        } else {
-            // 描画モード
+        if (cursorMode === 'eraser') {
+            eraseAt(x, y);
+            isDrawingRef.current = true;
+        } else if (cursorMode === 'draw') {
             isDrawingRef.current = true;
             lastPointRef.current = { x, y };
         }
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
-        if (!canvasRef.current || !engineRef.current) return;
-
+        if (!isDrawingRef.current || !canvasRef.current || !engineRef.current) return;
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (cursorMode === 'grab') {
-            // グラブモード時はMatter.jsのmouseConstraintが処理するため、ここでは何もしない
-            return;
-        } else if (isDrawingRef.current && cursorMode === 'eraser') {
-            // 消しゴムモードではドラッグしながら消す
-            eraseAtPosition(x, y);
-        } else if (isDrawingRef.current && cursorMode === 'draw') {
-            // 描画モード
-            if (lastPointRef.current) {
-                const dx = x - lastPointRef.current.x;
-                const dy = y - lastPointRef.current.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-
-                // 線を補完して隙間をなくす（超高密度に：2px間隔）
-                const segments = Math.max(1, Math.floor(distance / 2));
-
-                for (let i = 0; i < segments; i++) {
-                    const t = i / segments;
-                    const px = lastPointRef.current.x + dx * t;
-                    const py = lastPointRef.current.y + dy * t;
-
-                    // チョーク風のランダムなズレ（少し控えめに）
-                    const offset = (Math.random() - 0.5) * 1.5;
-
-                    const wall = Matter.Bodies.circle(px + offset, py + offset, 3, {
-                        isStatic: true,
-                        restitution: 0.9,
-                        friction: 0.5,
-                        render: {
-                            fillStyle: '#ffffff', // 白いチョーク
-                            strokeStyle: '#ffffff',
-                            lineWidth: 1
-                        }
-                    });
-
-                    Matter.World.add(engineRef.current.world, wall);
-                    wallsRef.current.push(wall);
-                }
+        if (cursorMode === 'eraser') {
+            eraseAt(x, y);
+        } else if (cursorMode === 'draw' && lastPointRef.current) {
+            const lp = lastPointRef.current;
+            const d = Math.hypot(x - lp.x, y - lp.y);
+            const steps = Math.max(1, Math.floor(d / 2));
+            for (let i = 0; i < steps; i++) {
+                const px = lp.x + (x - lp.x) * (i / steps);
+                const py = lp.y + (y - lp.y) * (i / steps);
+                const part = Matter.Bodies.circle(px, py, 3, {
+                    isStatic: true,
+                    render: { fillStyle: '#ffffff' }
+                });
+                Matter.World.add(engineRef.current.world, part);
+                currentStrokeBodiesRef.current.push(part);
             }
-
             lastPointRef.current = { x, y };
         }
     };
 
-    const handlePointerUp = (e: React.PointerEvent) => {
+    const handlePointerUp = () => {
+        if (!isDrawingRef.current) return;
         isDrawingRef.current = false;
+
+        if (cursorMode === 'draw' && currentStrokeBodiesRef.current.length > 0 && engineRef.current) {
+            const parts = currentStrokeBodiesRef.current;
+            parts.forEach(p => Matter.World.remove(engineRef.current!.world, p));
+
+            const compound = Matter.Body.create({
+                parts: parts.map(p => Matter.Bodies.circle(p.position.x, p.position.y, 3, { render: p.render })),
+                isStatic: false,
+                frictionAir: 0.1,
+                restitution: 0.1
+            });
+            (compound as any).isFloating = true;
+            Matter.World.add(engineRef.current.world, compound);
+            wallsRef.current.push(compound); // Eligible for eraser
+            currentStrokeBodiesRef.current = [];
+        }
         lastPointRef.current = null;
-        // ポインターキャプチャ解除
-        // (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
-    // 消しゴム機能: 指定位置のエンティティを削除（改善版）
-    const eraseAtPosition = (x: number, y: number) => {
+    const eraseAt = (x: number, y: number) => {
         if (!engineRef.current) return;
-
-        const eraseRadius = 25;
-        const world = engineRef.current.world;
-        const allBodies = Matter.Composite.allBodies(world);
-
-        // 指定座標付近のボディを検索
-        const hitBodies = Matter.Query.point(allBodies, { x, y });
-
-        hitBodies.forEach(body => {
-            // 床やハシゴ以外を削除（または特定のラベルのみ削除）
-            if (body.label !== 'Ground' && body.label !== 'Ladder') {
-                Matter.World.remove(world, body);
-
-                // 各種リストから削除
-                const entityIndex = entitiesRef.current.indexOf(body);
-                if (entityIndex > -1) entitiesRef.current.splice(entityIndex, 1);
-
-                const wallIndex = wallsRef.current.indexOf(body);
-                if (wallIndex > -1) wallsRef.current.splice(wallIndex, 1);
-
-                const humanoidIndex = humanoidDataRef.current.findIndex(h => h.body === body);
-                if (humanoidIndex > -1) humanoidDataRef.current.splice(humanoidIndex, 1);
+        const bodies = Matter.Composite.allBodies(engineRef.current.world);
+        const hits = Matter.Query.point(bodies, { x, y });
+        hits.forEach(b => {
+            if (b.label !== 'Ground' && b.label !== 'Ladder') {
+                Matter.World.remove(engineRef.current!.world, b);
+                // Clean lists
+                entitiesRef.current = entitiesRef.current.filter(e => e !== b);
+                wallsRef.current = wallsRef.current.filter(w => w !== b);
+                humanoidDataRef.current = humanoidDataRef.current.filter(d => d.body !== b);
             }
         });
-
-        // 古い方式（点ごとの距離チェック）もフォールバックとして残すが、基本はQuery.pointでOK
     };
 
-    // 消去機能
     const handleClear = () => {
         if (!engineRef.current) return;
-
-        // 全ての描画された壁を削除
-        wallsRef.current.forEach(wall => {
-            Matter.World.remove(engineRef.current!.world, wall);
-        });
+        wallsRef.current.forEach(w => Matter.World.remove(engineRef.current!.world, w));
         wallsRef.current = [];
-
         onClear();
     };
 
+    const btnStyle = (active: boolean) => ({
+        padding: '10px 18px',
+        fontSize: '14px',
+        backgroundColor: active ? '#ffffff' : '#2d5016',
+        color: active ? '#2d5016' : '#ffffff',
+        border: active ? '3px solid #ffff00' : '2px solid #ffffff',
+        borderRadius: '20px',
+        cursor: 'pointer',
+        fontWeight: 'bold' as const,
+        touchAction: 'manipulation' as const,
+        flexShrink: 0,
+        whiteSpace: 'nowrap' as const,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+    });
+
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
             <canvas
                 ref={canvasRef}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    touchAction: 'none',
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none', // スクロール防止
-                    cursor: cursorMode === 'grab' ? 'grab' : (cursorMode === 'eraser' ? 'pointer' : 'crosshair')
-                }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{ width: '100%', height: '100%', touchAction: 'none' }}
             />
-            {/* ボタンコンテナ - 上部スクロール可能エリア */}
             <div
                 style={{
                     position: 'absolute',
-                    top: '50px', // ノッチを避けるため下に移動
-                    left: '0',
+                    top: '40px',
+                    left: 0,
                     width: '100%',
                     display: 'flex',
-                    gap: '12px',
-                    alignItems: 'center',
-                    flexWrap: 'nowrap', // 折り返しなし
-                    overflowX: 'auto', // 横スクロール有効
-                    padding: '0 16px 16px 16px', // スクロールバーのためのパディングと左右の余白
-                    justifyContent: 'flex-start', // 左詰めでスクロール開始
-                    userSelect: 'none',
-                    WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none',
-                    WebkitOverflowScrolling: 'touch', // スムーズスクロール
-                    scrollbarWidth: 'none', // Firefox用スクロールバー非表示
-                    msOverflowStyle: 'none' // IE/Edge用
+                    gap: '10px',
+                    padding: '10px 20px',
+                    overflowX: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    pointerEvents: 'none' // Container doesn't block
                 }}
-                onPointerDown={(e) => e.stopPropagation()}
             >
-                <style jsx>{`
-                    div::-webkit-scrollbar {
-                        display: none; /* Chrome/Safari用スクロールバー非表示 */
-                    }
-                `}</style>
-
-                <button
-                    onClick={() => setIsSpawning(!isSpawning)}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: isSpawning ? '#2d5016' : '#ffffff',
-                        color: isSpawning ? '#ffffff' : '#2d5016',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px', // 丸みを帯びたデザイン
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0, // 縮小しない
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
-                </button>
-                <button
-                    onClick={spawnHumanoid}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: '#2d5016',
-                        color: '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                >
-                    🚶 人を追加
-                </button>
-                <button
-                    onClick={spawnLadder}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: '#2d5016',
-                        color: '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    🪜 ハシゴ
-                </button>
-                <button
-                    onClick={spawnBall}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: '#2d5016',
-                        color: '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    ⚽ ボールを追加
-                </button>
-
-                <button
-                    onClick={() => setCursorMode('draw')}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: cursorMode === 'draw' ? '#ffffff' : '#2d5016',
-                        color: cursorMode === 'draw' ? '#2d5016' : '#ffffff',
-                        border: cursorMode === 'draw' ? '3px solid #ffff00' : '2px solid #ffffff', // 選択中は黄色く太い枠線
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    ✏️ 鉛筆
-                </button>
-                <button
-                    onClick={() => setCursorMode('grab')}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: cursorMode === 'grab' ? '#ffffff' : '#2d5016',
-                        color: cursorMode === 'grab' ? '#2d5016' : '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    ✋ 手
-                </button>
-                <button
-                    onClick={() => setCursorMode('eraser')}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: cursorMode === 'eraser' ? '#ffffff' : '#2d5016',
-                        color: cursorMode === 'eraser' ? '#2d5016' : '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    🧹 消しゴム
-                </button>
-                <button
-                    onClick={handleClear}
-                    style={{
-                        padding: '10px 18px',
-                        fontSize: '14px',
-                        backgroundColor: '#2d5016',
-                        color: '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '20px',
-                        cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        flexShrink: 0,
-                        whiteSpace: 'nowrap',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                    }}
-                    onPointerDown={(e) => e.stopPropagation()}
-                >
-                    消去
-                </button>
+                <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
+                    <button onClick={toggleSpawning} style={btnStyle(!isSpawning)}>
+                        {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
+                    </button>
+                    <button onClick={() => {
+                        const width = canvasRef.current?.width || 800;
+                        const spawn = getHumanoidSpawnPosition(width, 600);
+                        const body = createHumanoidEntity(spawn.x, spawn.y);
+                        Matter.World.add(engineRef.current!.world, body);
+                        entitiesRef.current.push(body);
+                        humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0 });
+                    }} style={btnStyle(false)}>🚶 人</button>
+                    <button onClick={() => {
+                        const ladder = createLadderEntity((canvasRef.current?.width || 800) / 2, 200);
+                        Matter.World.add(engineRef.current!.world, ladder);
+                        entitiesRef.current.push(ladder);
+                    }} style={btnStyle(false)}>🪜 ハシゴ</button>
+                    <button onClick={() => {
+                        const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
+                        const body = createEntity(spawn.x, spawn.y);
+                        Matter.Body.setVelocity(body, { x: spawn.vx, y: spawn.vy });
+                        Matter.World.add(engineRef.current!.world, body);
+                        entitiesRef.current.push(body);
+                    }} style={btnStyle(false)}>⚽ ボール</button>
+                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️ 鉛筆</button>
+                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋ 手</button>
+                    <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹 消しゴム</button>
+                    <button onClick={handleClear} style={btnStyle(false)}>消去</button>
+                </div>
             </div>
+            <style jsx>{`
+                div::-webkit-scrollbar { display: none; }
+            `}</style>
         </div>
     );
 };
