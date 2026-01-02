@@ -390,7 +390,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 style={{
                     width: '100%',
                     height: '100%',
-                    touchAction: 'none', // スクロール防止
+                    touchAction: 'none',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none', // スクロール防止
                     cursor: isEraserMode ? 'pointer' : 'crosshair'
                 }}
                 onPointerDown={handlePointerDown}
@@ -410,7 +413,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     alignItems: 'center',
                     flexWrap: 'wrap',
                     justifyContent: 'center',
-                    maxWidth: '95%'
+                    maxWidth: '95%',
+                    userSelect: 'none',
+                    WebkitUserSelect: 'none',
+                    WebkitTouchCallout: 'none'
                 }}
             >
                 <button
