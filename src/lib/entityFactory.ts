@@ -55,7 +55,11 @@ export function createCloudEntity(x: number, y: number): MatterJS.Body {
 
     const cloud = Body.create({
         parts: parts,
-        isStatic: true, // 空中に固定
+        isStatic: false, // 手で動かせるように動的にする
+        restitution: 0.5,
+        friction: 0.1,
+        frictionAir: 0.05, // 空気抵抗を増やしてふわふわさせる
+        density: 0.001,
         render: {
             fillStyle: '#ffffff',
             strokeStyle: '#dddddd',
@@ -66,6 +70,9 @@ export function createCloudEntity(x: number, y: number): MatterJS.Body {
             mask: CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 壁扱い
         }
     });
+
+    // カスタムプロパティ：浮遊（重力無視）
+    (cloud as any).isFloating = true;
 
     return cloud;
 }
