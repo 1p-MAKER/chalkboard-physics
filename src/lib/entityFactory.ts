@@ -1,8 +1,9 @@
 import MatterJS from 'matter-js';
 
 const CATEGORY_DEFAULT = 0x0001; // 壁など（デフォルト）
-const CATEGORY_DYNAMIC = 0x0002; // 小人、ボールなど
+const CATEGORY_DYNAMIC = 0x0002; // ボールなど
 const CATEGORY_LADDER = 0x0004;  // ハシゴ
+const CATEGORY_HUMANOID = 0x0008; // 人型キャラクター
 
 /**
  * シンプルなキャラクター（エンティティ）を生成する
