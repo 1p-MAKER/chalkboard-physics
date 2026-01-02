@@ -18,7 +18,7 @@ export function createEntity(x: number, y: number): MatterJS.Body {
         density: 0.001,
         collisionFilter: {
             category: CATEGORY_DYNAMIC,
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC // ハシゴ(0x0004)とは衝突しない
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 全てと衝突
         },
         render: {
             fillStyle: '#ffffff',
@@ -42,8 +42,8 @@ export function createHumanoidEntity(x: number, y: number): MatterJS.Body {
         density: 0.002,
         inertia: Infinity, // 回転防止
         collisionFilter: {
-            category: CATEGORY_DYNAMIC,
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC // ハシゴ(0x0004)とは衝突しない
+            category: CATEGORY_HUMANOID,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC // 壁・ボールとは衝突するが、他のHUMANOIDとは衝突しない
         },
         render: {
             fillStyle: 'transparent', // カスタムレンダリングで描画するため透明に
