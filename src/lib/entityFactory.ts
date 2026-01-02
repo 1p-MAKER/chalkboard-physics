@@ -223,22 +223,37 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
         mask: CATEGORY_DEFAULT // 壁(0x0001)とは衝突するが、DYNAMIC(0x0002)とは衝突しない
     };
 
+    const topBarHeight = 5;
+
+    // トップバー（一番上の平らな部分）
+    parts.push(MatterJS.Bodies.rectangle(x, y - height / 2 + topBarHeight / 2, width, topBarHeight, {
+        render: { fillStyle: '#ffffff' },
+        collisionFilter: filter
+    }));
+
+    // レールの高さ調整（トップバーの下から伸びる）
+    const railHeight = height - topBarHeight;
+    const railY = y + topBarHeight / 2;
+
     // 左のレール
-    parts.push(MatterJS.Bodies.rectangle(x - width / 2 + railWidth / 2, y, railWidth, height, {
+    parts.push(MatterJS.Bodies.rectangle(x - width / 2 + railWidth / 2, railY, railWidth, railHeight, {
         render: { fillStyle: '#ffffff' },
         collisionFilter: filter
     }));
 
     // 右のレール
-    parts.push(MatterJS.Bodies.rectangle(x + width / 2 - railWidth / 2, y, railWidth, height, {
+    parts.push(MatterJS.Bodies.rectangle(x + width / 2 - railWidth / 2, railY, railWidth, railHeight, {
         render: { fillStyle: '#ffffff' },
         collisionFilter: filter
     }));
 
-    // 横桟（ラング）
-    const step = height / (rungCount + 1);
+    // 横桟（ラング） - トップバーを除くスペースに等間隔
+    const availableHeight = height - topBarHeight;
+    const step = availableHeight / (rungCount + 1);
+
     for (let i = 1; i <= rungCount; i++) {
-        const py = y - height / 2 + step * i;
+        // トップバーの下から配置開始
+        const py = (y - height / 2 + topBarHeight) + step * i;
         parts.push(MatterJS.Bodies.rectangle(x, py, width - railWidth * 2, rungHeight, {
             render: { fillStyle: '#ffffff' },
             collisionFilter: filter
