@@ -30,16 +30,16 @@ export function createEntity(x: number, y: number): Matter.Body {
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
     const { Bodies } = Matter;
 
-    // シンプルな人型（1つの長方形）
-    const humanoid = Bodies.rectangle(x, y, 20, 50, {
+    // シンプルな人型（1つの長方形）- サイズを大きく、色を目立つ赤色に
+    const humanoid = Bodies.rectangle(x, y, 40, 80, {
         restitution: 0.3,
         friction: 0.8,
         density: 0.002,
         inertia: Infinity, // 回転防止
         render: {
-            fillStyle: '#ffcccc', // ピンク色で識別しやすく
+            fillStyle: '#ff0000', // 赤色で非常に目立つ
             strokeStyle: '#ffffff',
-            lineWidth: 3
+            lineWidth: 5 // 太い枠線
         }
     });
 
@@ -89,7 +89,7 @@ export function getRandomSpawnPosition(
 
 /**
  * 人型キャラクター専用のスポーン位置を決定
- * 左右からのみ、地面に立った状態で出現
+ * 画面内の左右に直接スポーン（すぐに見える）
  */
 export function getHumanoidSpawnPosition(
     canvasWidth: number,
@@ -98,17 +98,17 @@ export function getHumanoidSpawnPosition(
     const fromLeft = Math.random() > 0.5;
 
     if (fromLeft) {
-        // 左から歩いてくる
+        // 画面内の左側に直接スポーン
         return {
-            x: -50,
-            y: canvasHeight - 100, // 地面近く
+            x: 100, // 画面内
+            y: canvasHeight - 150, // 地面から十分な高さ
             direction: 1 // 右向きに歩く
         };
     } else {
-        // 右から歩いてくる
+        // 画面内の右側に直接スポーン
         return {
-            x: canvasWidth + 50,
-            y: canvasHeight - 100, // 地面近く
+            x: canvasWidth - 100, // 画面内
+            y: canvasHeight - 150, // 地面から十分な高さ
             direction: -1 // 左向きに歩く
         };
     }
