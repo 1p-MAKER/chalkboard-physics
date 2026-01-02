@@ -13,6 +13,7 @@ interface HumanoidData {
     direction: number; // 1: right, -1: left
     legPhase: number; // 歩行アニメーション用のフェーズ
     stuckCounter: number; // 行き止まり検知用カウンター
+    isClimbing?: boolean; // ハシゴ登り状態
 }
 
 const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
@@ -111,7 +112,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 const humanoid = humanoidData.body;
 
                 // カスタムレンダリング
-                renderHumanoid(context, humanoid, humanoidData.legPhase, humanoidData.direction);
+                renderHumanoid(context, humanoid, humanoidData.legPhase, humanoidData.direction, humanoidData.isClimbing || false);
             });
         });
 
@@ -171,6 +172,35 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 const direction = humanoidData.direction;
 
                 if (!humanoid.position) return;
+
+                // ハシゴ検知と登り動作
+                let isClimbing = false;
+                const ladders = entitiesRef.current.filter(e => e.label === 'Ladder');
+
+                for (const ladder of ladders) {
+                    if (Matter.Bounds.overlaps(humanoid.bounds, ladder.bounds)) {
+                        isClimbing = true;
+
+                        // ハシゴに吸い寄せられながら登る
+                        Matter.Body.setVelocity(humanoid, {
+                            x: (ladder.position.x - humanoid.position.x) * 0.1,
+                            y: -1.5 // スクリーン上方向へ移動
+                        });
+
+                        // 登りアニメーション更新
+                        humanoidData.legPhase += 0.2;
+                        break;
+                    }
+                }
+
+                humanoidData.isClimbing = isClimbing;
+
+                if (isClimbing) {
+                    // ハシゴ登り中は他の動きをキャンセル
+                    // 角度維持
+                    Matter.Body.setAngle(humanoid, 0);
+                    return;
+                }
 
                 // 角度を強制的に0に保つ（直立状態維持）
                 Matter.Body.setAngle(humanoid, 0);
