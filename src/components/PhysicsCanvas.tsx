@@ -37,9 +37,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         if (!canvasRef.current) return;
 
         const canvas = canvasRef.current;
-        // Canvasのサイズを明示的に設定
-        canvas.width = canvas.clientWidth;
-        canvas.height = canvas.clientHeight;
+        // Canvasのサイズを明示的に設定（フォールバック付き）
+        const width = canvas.clientWidth || window.innerWidth;
+        const height = canvas.clientHeight || window.innerHeight;
+        canvas.width = width;
+        canvas.height = height;
 
         // Matter.js エンジンとレンダラーの初期化
         const { Engine, Render, Runner, World, Bodies, Events, MouseConstraint, Mouse } = Matter;
@@ -47,9 +49,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
         });
-
-        const width = canvas.width;
-        const height = canvas.height;
 
         const render = Render.create({
             canvas: canvas,
@@ -74,6 +73,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         World.add(engine.world, [ground]);
         wallsRef.current.push(ground);
 
+        // 雲と泡は一時的に無効化（座標計算バグの疑いあり）
+        /*
         // 雲を配置（上空の障害物）
         for (let i = 0; i < 5; i++) {
             const cloudX = Math.random() * width;
@@ -91,6 +92,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             World.add(engine.world, bubble);
             entitiesRef.current.push(bubble);
         }
+        */
         renderRef.current = render;
 
         // マウス操作（グラブ）の設定
