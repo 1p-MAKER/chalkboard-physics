@@ -12,6 +12,7 @@ import {
     getHumanoidSpawnPosition,
     renderHumanoid
 } from '@/lib/entityFactory';
+import { soundManager } from '@/lib/soundManager';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -48,12 +49,28 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     // React State (UI only)
     const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
     const [isSpawning, setIsSpawning] = useState(true);
+    const [isMuted, setIsMuted] = useState(false); // Default unmuted, but soundManager starts unmuted check internal state
 
     // Toggle Spawning
     const toggleSpawning = () => {
         const newState = !isSpawning;
         setIsSpawning(newState);
         isSpawningRef.current = newState;
+    };
+
+    const toggleMute = () => {
+        soundManager.toggleMute();
+        setIsMuted(soundManager.getMutedState());
+        if (!soundManager.getMutedState()) {
+            soundManager.startBGM();
+        } else {
+            soundManager.stopBGM();
+        }
+    };
+
+    // Auto-start BGM on first interaction (optional or user-triggered)
+    const handleFirstInteraction = () => {
+        // soundManager.startBGM(); // Allow user to turn it on via button instead to avoid annoying auto-play
     };
 
     // Initialize Engine (Mount Once)
@@ -156,7 +173,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     if (dist < 25) { // 衝突判定（小型化に合わせて調整）
                         (h as any).inBubble = true;
                         (b as any).containedEntity = h;
+                        (h as any).inBubble = true;
+                        (b as any).containedEntity = h;
                         h.collisionFilter.mask = 0x0001; // 地面(CATEGORY_DEFAULT)のみと衝突するように
+                        soundManager.playPop(); // SE: Bubble Capture
                         break;
                     }
                 }
@@ -252,17 +272,28 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     data.stuckCounter = 0;
                 }
                 data.legPhase += 0.2;
+                data.legPhase += 0.2;
+
+                // Footstep sound
+                const currentLegInteger = Math.floor(data.legPhase);
+                const previousLegInteger = Math.floor(data.legPhase - 0.2); // Approximate previous state
+                if (currentLegInteger !== previousLegInteger && Math.abs(body.velocity.x) > 0.5) {
+                    soundManager.playFootstep();
+                }
+
 
                 // Jump logic (Obstacle)
                 const isBlockedFront = Query.point(wallsRef.current, { x: body.position.x + data.direction * 50, y: body.position.y }).length > 0;
                 if (isBlockedFront && Math.abs(body.velocity.y) < 0.1) {
                     Matter.Body.applyForce(body, body.position, { x: data.direction * 0.04, y: -0.12 });
+                    soundManager.playJump(); // SE: Jump
                 } else if (Math.random() < 0.02 && Math.abs(body.velocity.y) < 0.1) {
                     // Random Jump (2% probability)
                     Matter.Body.applyForce(body, body.position, {
                         x: 0,
                         y: -0.08 // Slightly weaker than obstacle jump
                     });
+                    soundManager.playJump(); // SE: Jump
                 }
             });
         }, 100);
@@ -278,6 +309,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     World.add(engine.world, body);
                     entitiesRef.current.push(body);
                     humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0 });
+                    soundManager.playSpawn(); // SE: Spawn
+
                 } else {
                     const spawn = getRandomSpawnPosition(width, height);
                     const body = createEntity(spawn.x, spawn.y);
@@ -292,6 +325,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const cleanupInterval = setInterval(() => {
             entitiesRef.current = entitiesRef.current.filter(body => {
                 if (body.position.y > height + 200 || body.position.x < -200 || body.position.x > width + 200) {
+                    // If a bubble with a contained entity is removed, play bubble pop sound
+                    if ((body as any).isBubble && (body as any).containedEntity) {
+                        soundManager.playBubblePop();
+                    }
                     World.remove(engine.world, body);
                     const idx = humanoidDataRef.current.findIndex(d => d.body === body);
                     if (idx > -1) humanoidDataRef.current.splice(idx, 1);
@@ -406,6 +443,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const hits = Matter.Query.point(bodies, { x, y });
         hits.forEach(b => {
             if (b.label !== 'Ground' && b.label !== 'Ladder') {
+                // If a bubble with a contained entity is removed, play bubble pop sound
+                if ((b as any).isBubble && (b as any).containedEntity) {
+                    soundManager.playBubblePop();
+                }
                 Matter.World.remove(engineRef.current!.world, b);
                 // Clean lists
                 entitiesRef.current = entitiesRef.current.filter(e => e !== b);
@@ -422,19 +463,25 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         onClear();
     };
 
+    // 大きくしたボタンスタイル
     const btnStyle = (active: boolean) => ({
-        padding: '10px 18px',
-        fontSize: '14px',
-        backgroundColor: active ? '#ffffff' : '#2d5016',
+        padding: '0 24px', // 横幅を広げる
+        height: '60px',    // 高さを60pxに固定（タップしやすく）
+        fontSize: '20px',  // 文字サイズアップ
+        backgroundColor: active ? '#ffffff' : '#4a6b22', // 少し明るめの緑に
         color: active ? '#2d5016' : '#ffffff',
-        border: active ? '3px solid #ffff00' : '2px solid #ffffff',
-        borderRadius: '20px',
+        border: active ? '4px solid #ffff00' : '3px solid #ffffff',
+        borderRadius: '30px', // 丸みを強く
         cursor: 'pointer',
         fontWeight: 'bold' as const,
         touchAction: 'manipulation' as const,
         flexShrink: 0,
         whiteSpace: 'nowrap' as const,
-        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        boxShadow: '0 4px 8px rgba(0,0,0,0.3)', // 影を強く
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px'
     });
 
     return (
@@ -451,31 +498,33 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             <div
                 style={{
                     position: 'absolute',
-                    bottom: '0', // 下部に配置
+                    bottom: '0',
                     left: 0,
                     width: '100%',
-                    height: '110px',
+                    height: '120px', // 地面と同じ高さに合わせる
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'center', // 上下中央寄せ
-                    paddingBottom: '20px', // iPhoneのホームバー回避
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                    backdropFilter: 'blur(8px)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    borderTop: '1px solid rgba(255, 255, 255, 0.1)', // 上線に変更
-                    zIndex: 10,
+                    justifyContent: 'center',
+                    paddingBottom: '0',
+                    backgroundColor: 'rgba(50, 50, 50, 0.8)', // 濃い目の背景でコントラスト確保
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    borderTop: '2px solid rgba(255, 255, 255, 0.3)',
+                    zIndex: 20, // 地面より手前に
                     overflowX: 'auto',
                     WebkitOverflowScrolling: 'touch',
                 }}
             >
                 <div style={{
-                    display: 'inline-flex', // 横に並べる
-                    gap: '12px',
-                    padding: '0 20px',
-                    minWidth: 'max-content' // コンテンツに合わせて広がる
+                    display: 'inline-flex',
+                    gap: '16px', // 間隔を広げる
+                    padding: '0 24px',
+                    minWidth: 'max-content',
+                    height: '100%',
+                    alignItems: 'center'
                 }}>
                     <button onClick={toggleSpawning} style={btnStyle(!isSpawning)}>
-                        {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
+                        {isSpawning ? '⏸️' : '▶️'}
                     </button>
                     <button onClick={() => {
                         const width = canvasRef.current?.width || 800;
@@ -484,25 +533,61 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         Matter.World.add(engineRef.current!.world, body);
                         entitiesRef.current.push(body);
                         humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0 });
-                    }} style={btnStyle(false)}>🚶 人</button>
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🚶</button>
+
                     <button onClick={() => {
                         const ladder = createLadderEntity((canvasRef.current?.width || 800) / 2, 200);
                         Matter.World.add(engineRef.current!.world, ladder);
                         entitiesRef.current.push(ladder);
-                    }} style={btnStyle(false)}>🪜 ハシゴ</button>
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🪜</button>
+
+                    <button onClick={() => {
+                        const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
+                        const body = createBubbleEntity(spawn.x, spawn.y);
+                        Matter.World.add(engineRef.current!.world, body);
+                        entitiesRef.current.push(body);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🫧</button>
+
                     <button onClick={() => {
                         const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
                         const body = createEntity(spawn.x, spawn.y);
                         Matter.Body.setVelocity(body, { x: spawn.vx, y: spawn.vy });
                         Matter.World.add(engineRef.current!.world, body);
                         entitiesRef.current.push(body);
-                    }} style={btnStyle(false)}>⚽ ボール</button>
-                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️ 鉛筆</button>
-                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋ 手</button>
-                    <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹 消しゴム</button>
-                    <button onClick={handleClear} style={btnStyle(false)}>消去</button>
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>⚽</button>
+
+                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
+                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
+                    <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹</button>
+                    <button onClick={handleClear} style={btnStyle(false)}>🗑️</button>
+
+                    {/* Mute Button */}
+                    <button
+                        onPointerDown={toggleMute}
+                        style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '50%',
+                            backgroundColor: isMuted ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.8)',
+                            border: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '30px',
+                            cursor: 'pointer',
+                            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
+                            flexShrink: 0
+                        }}
+                    >
+                        {isMuted ? '🔇' : '🔊'}
+                    </button>
                 </div>
             </div>
+
             <style jsx>{`
                 div::-webkit-scrollbar { display: none; }
             `}</style>
