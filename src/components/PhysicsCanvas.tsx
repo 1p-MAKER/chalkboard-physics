@@ -377,29 +377,30 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             <div
                 style={{
                     position: 'absolute',
-                    top: '20px',
+                    top: '10px',
                     left: '50%',
                     transform: 'translateX(-50%)',
                     display: 'flex',
-                    gap: '12px',
+                    gap: '8px',
                     alignItems: 'center',
                     flexWrap: 'wrap',
                     justifyContent: 'center',
-                    maxWidth: '90%'
+                    maxWidth: '95%'
                 }}
             >
                 <button
                     onClick={() => setIsSpawning(!isSpawning)}
                     style={{
-                        padding: '12px 24px',
-                        fontSize: '16px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
                         backgroundColor: isSpawning ? '#2d5016' : '#ffffff',
                         color: isSpawning ? '#ffffff' : '#2d5016',
                         border: '2px solid #ffffff',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        minWidth: '100px'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -408,15 +409,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={spawnHumanoid}
                     style={{
-                        padding: '12px 24px',
-                        fontSize: '16px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        minWidth: '100px'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -425,15 +427,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={spawnBall}
                     style={{
-                        padding: '12px 24px',
-                        fontSize: '16px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        minWidth: '120px'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -442,15 +445,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={() => setIsEraserMode(!isEraserMode)}
                     style={{
-                        padding: '12px 24px',
-                        fontSize: '16px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
                         backgroundColor: isEraserMode ? '#ffffff' : '#2d5016',
                         color: isEraserMode ? '#2d5016' : '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        minWidth: '100px'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -459,15 +463,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={handleClear}
                     style={{
-                        padding: '12px 24px',
-                        fontSize: '16px',
+                        padding: '8px 16px',
+                        fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
-                        touchAction: 'manipulation'
+                        touchAction: 'manipulation',
+                        minWidth: '80px'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
