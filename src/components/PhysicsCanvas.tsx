@@ -90,14 +90,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             humanoidDataRef.current.forEach(humanoidData => {
                 const humanoid = humanoidData.body;
 
-                // Matter.jsのデフォルトレンダリングを消す
-                context.clearRect(
-                    humanoid.position.x - 30,
-                    humanoid.position.y - 60,
-                    60,
-                    120
-                );
-
                 // カスタムレンダリング
                 renderHumanoid(context, humanoid, humanoidData.legPhase);
             });
