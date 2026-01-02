@@ -153,7 +153,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 humanoidData.legPhase += 0.2;
 
                 // 前方の障害物検知（レイキャスト的な処理）
-                const checkDistance = 40;
+                const checkDistance = 60;
                 const checkX = humanoid.position.x + (direction * checkDistance);
                 const checkY = humanoid.position.y;
 
@@ -164,7 +164,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     const dy = wall.position.y - checkY;
                     const distance = Math.sqrt(dx * dx + dy * dy);
 
-                    if (distance < 30) {
+                    if (distance < 50) {
                         obstacleDetected = true;
                     }
                 });
@@ -173,8 +173,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 if (obstacleDetected && Math.abs(humanoid.velocity.y) < 0.1) {
                     // ジャンプ力を上方向に加える（地面にいる時のみ）
                     Matter.Body.applyForce(humanoid, humanoid.position, {
-                        x: direction * 0.01, // 前方にも少し力を加える
-                        y: -0.06 // 上方向に大きな力
+                        x: direction * 0.04, // 前方にも少し力を加える
+                        y: -0.12 // 上方向に大きな力
                     });
 
                     // ジャンプアニメーション用のフェーズをリセット
