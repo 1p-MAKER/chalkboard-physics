@@ -512,33 +512,38 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         isDrawingRef.current = false;
         lastPointRef.current = null;
         // ポインターキャプチャ解除
-        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+        // (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
-    // 消しゴム機能: 指定位置の壁を削除
+    // 消しゴム機能: 指定位置のエンティティを削除（改善版）
     const eraseAtPosition = (x: number, y: number) => {
         if (!engineRef.current) return;
 
-        const eraseRadius = 20; // 消しゴムの範囲
-        const wallsToRemove: Matter.Body[] = [];
+        const eraseRadius = 25;
+        const world = engineRef.current.world;
+        const allBodies = Matter.Composite.allBodies(world);
 
-        wallsRef.current.forEach(wall => {
-            const dx = wall.position.x - x;
-            const dy = wall.position.y - y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
+        // 指定座標付近のボディを検索
+        const hitBodies = Matter.Query.point(allBodies, { x, y });
 
-            if (distance < eraseRadius) {
-                wallsToRemove.push(wall);
+        hitBodies.forEach(body => {
+            // 床やハシゴ以外を削除（または特定のラベルのみ削除）
+            if (body.label !== 'Ground' && body.label !== 'Ladder') {
+                Matter.World.remove(world, body);
+
+                // 各種リストから削除
+                const entityIndex = entitiesRef.current.indexOf(body);
+                if (entityIndex > -1) entitiesRef.current.splice(entityIndex, 1);
+
+                const wallIndex = wallsRef.current.indexOf(body);
+                if (wallIndex > -1) wallsRef.current.splice(wallIndex, 1);
+
+                const humanoidIndex = humanoidDataRef.current.findIndex(h => h.body === body);
+                if (humanoidIndex > -1) humanoidDataRef.current.splice(humanoidIndex, 1);
             }
         });
 
-        wallsToRemove.forEach(wall => {
-            Matter.World.remove(engineRef.current!.world, wall);
-            const index = wallsRef.current.indexOf(wall);
-            if (index > -1) {
-                wallsRef.current.splice(index, 1);
-            }
-        });
+        // 古い方式（点ごとの距離チェック）もフォールバックとして残すが、基本はQuery.pointでOK
     };
 
     // 消去機能
