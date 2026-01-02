@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, createLadderEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, createLadderEntity, createCloudEntity, createBubbleEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -62,22 +62,35 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             }
         });
 
-        // 見える地面を作成（画面下部、白い線）
-        const groundY = height - 30; // 画面下部から少し上
-        const ground = Bodies.rectangle(width / 2, groundY, width, 10, {
+        // 壁（床）
+        const ground = Bodies.rectangle(width / 2, height + 10, width, 60, {
             isStatic: true,
-            restitution: 0.3,
-            friction: 0.8, // 地面との摩擦を上げる
-            render: {
-                fillStyle: '#ffffff', // 白い地面
-                strokeStyle: '#ffffff',
-                lineWidth: 2
+            render: { fillStyle: '#ffffff' },
+            collisionFilter: {
+                category: 0x0001,
+                mask: 0xFFFFFFFF
             }
         });
-
         World.add(engine.world, [ground]);
+        wallsRef.current.push(ground);
 
-        engineRef.current = engine;
+        // 雲を配置（上空の障害物）
+        for (let i = 0; i < 5; i++) {
+            const cloudX = Math.random() * width;
+            const cloudY = Math.random() * (height / 3); // 上部1/3に配置
+            const cloud = createCloudEntity(cloudX, cloudY);
+            World.add(engine.world, cloud);
+            entitiesRef.current.push(cloud);
+        }
+
+        // 泡を配置（浮遊物）
+        for (let i = 0; i < 8; i++) {
+            const bubbleX = Math.random() * width;
+            const bubbleY = Math.random() * height;
+            const bubble = createBubbleEntity(bubbleX, bubbleY);
+            World.add(engine.world, bubble);
+            entitiesRef.current.push(bubble);
+        }
         renderRef.current = render;
 
         // マウス操作（グラブ）の設定

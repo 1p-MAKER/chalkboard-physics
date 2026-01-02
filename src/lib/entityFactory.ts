@@ -10,8 +10,13 @@ const CATEGORY_HUMANOID = 0x0008; // 人型キャラクター
  * 丸い体に目と足を持つ可愛らしいデザイン
  */
 export function createEntity(x: number, y: number): MatterJS.Body {
-    // メインの体（円形）
-    const bodyRadius = 20;
+    // メインの体（円形） - サイズを50%縮小 (20 -> 10)
+    const bodyRadius = 10;
+
+    // ランダムなパステルカラー
+    const hue = Math.floor(Math.random() * 360);
+    const color = `hsl(${hue}, 70%, 80%)`;
+
     const body = MatterJS.Bodies.circle(x, y, bodyRadius, {
         restitution: 0.9,  // 高反発
         friction: 0.01,     // 極低摩擦
@@ -21,13 +26,72 @@ export function createEntity(x: number, y: number): MatterJS.Body {
             mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 全てと衝突
         },
         render: {
-            fillStyle: '#ffffff',
-            strokeStyle: '#333333',
+            fillStyle: color,
+            strokeStyle: '#ffffff', // 白い縁取り
             lineWidth: 2
         }
     });
 
     return body;
+}
+
+/**
+ * 雲（エンティティ）を生成する
+ * 複数の円を組み合わせた静的な障害物
+ */
+export function createCloudEntity(x: number, y: number): MatterJS.Body {
+    const { Bodies, Body } = MatterJS;
+
+    const parts = [
+        Bodies.circle(x, y, 30),
+        Bodies.circle(x - 25, y + 10, 25),
+        Bodies.circle(x + 25, y + 10, 25),
+        Bodies.circle(x - 15, y - 15, 20),
+        Bodies.circle(x + 15, y - 15, 20)
+    ];
+
+    const cloud = Body.create({
+        parts: parts,
+        isStatic: true, // 空中に固定
+        render: {
+            fillStyle: '#ffffff',
+            strokeStyle: '#dddddd',
+            lineWidth: 1
+        },
+        collisionFilter: {
+            category: CATEGORY_DEFAULT,
+            mask: CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 壁扱い
+        }
+    });
+
+    return cloud;
+}
+
+/**
+ * 泡（エンティティ）を生成する
+ * ふわふわと上昇する
+ */
+export function createBubbleEntity(x: number, y: number): MatterJS.Body {
+    const bubble = MatterJS.Bodies.circle(x, y, 15, {
+        restitution: 0.9,
+        friction: 0.1,
+        frictionAir: 0.05, // 空気抵抗大
+        density: 0.0001, // 非常に軽い
+        collisionFilter: {
+            category: CATEGORY_DYNAMIC,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID
+        },
+        render: {
+            fillStyle: 'rgba(255, 255, 255, 0.3)',
+            strokeStyle: '#ffffff',
+            lineWidth: 1
+        }
+    });
+
+    // カスタムプロパティ：上昇フラグ
+    (bubble as any).isBubble = true;
+
+    return bubble;
 }
 
 /**
