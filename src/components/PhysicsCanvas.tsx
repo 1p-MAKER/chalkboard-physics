@@ -181,10 +181,27 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     if (Matter.Bounds.overlaps(humanoid.bounds, ladder.bounds)) {
                         isClimbing = true;
 
-                        // ハシゴに吸い寄せられながら登る
+                        // 頭上の障害物チェック
+                        let headBlocked = false;
+                        const checkHeadX = humanoid.position.x;
+                        const checkHeadY = humanoid.position.y - 40; // 頭上
+
+                        // 壁との衝突判定（簡易）
+                        wallsRef.current.forEach(wall => {
+                            const dx = wall.position.x - checkHeadX;
+                            const dy = wall.position.y - checkHeadY;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            if (distance < 30) { // 壁の半径にもよるが、近ければブロックとみなす
+                                headBlocked = true;
+                            }
+                        });
+
+                        // ハシゴに吸い寄せられながら登る（または降りる）
+                        const climbSpeed = headBlocked ? 2.0 : -1.5; // ブロック時は降りる(正)、通常は登る(負)
+
                         Matter.Body.setVelocity(humanoid, {
                             x: (ladder.position.x - humanoid.position.x) * 0.1,
-                            y: -1.5 // スクリーン上方向へ移動
+                            y: climbSpeed
                         });
 
                         // 登りアニメーション更新
