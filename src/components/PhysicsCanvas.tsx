@@ -28,7 +28,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const spawnIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const animationFrameRef = useRef<number | null>(null);
-    const [isEraserMode, setIsEraserMode] = useState(false);
+    const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null);
+    const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
     const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
 
     useEffect(() => {
@@ -40,7 +41,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         canvas.height = canvas.clientHeight;
 
         // Matter.js エンジンとレンダラーの初期化
-        const { Engine, Render, Runner, World, Bodies, Events } = Matter;
+        const { Engine, Render, Runner, World, Bodies, Events, MouseConstraint, Mouse } = Matter;
 
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
@@ -77,6 +78,24 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         engineRef.current = engine;
         renderRef.current = render;
+
+        // マウス操作（グラブ）の設定
+        const mouse = Mouse.create(render.canvas);
+        const mouseConstraint = MouseConstraint.create(engine, {
+            mouse: mouse,
+            constraint: {
+                stiffness: 0.2,
+                render: {
+                    visible: false
+                }
+            }
+        });
+        mouseConstraintRef.current = mouseConstraint;
+
+        // 初期モードに応じた設定
+        if (cursorMode === 'grab') {
+            World.add(engine.world, mouseConstraint);
+        }
 
         const runner = Runner.create();
         runnerRef.current = runner;
@@ -245,6 +264,20 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         };
     }, [isSpawning]);
 
+    // カーソルモード変更時の副作用
+    useEffect(() => {
+        if (!engineRef.current || !mouseConstraintRef.current) return;
+
+        const world = engineRef.current.world;
+        const mouseConstraint = mouseConstraintRef.current;
+
+        if (cursorMode === 'grab') {
+            Matter.World.add(world, mouseConstraint);
+        } else {
+            Matter.World.remove(world, mouseConstraint);
+        }
+    }, [cursorMode]);
+
     // 人型キャラクターを手動で追加
     const spawnHumanoid = () => {
         if (!engineRef.current || !canvasRef.current) return;
@@ -297,6 +330,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     };
 
     // 描画機能
+    // 描画機能
     const handlePointerDown = (e: React.PointerEvent) => {
         if (!canvasRef.current || !engineRef.current) return;
 
@@ -304,7 +338,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (isEraserMode) {
+        if (cursorMode === 'grab') {
+            // グラブモード時はMatter.jsのmouseConstraintが処理するため、ここでは何もしない
+            return;
+        } else if (cursorMode === 'eraser') {
             // 消しゴムモード: タップした位置の壁を削除
             eraseAtPosition(x, y);
         } else {
@@ -321,10 +358,13 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (isEraserMode) {
+        if (cursorMode === 'grab') {
+            // グラブモード時はMatter.jsのmouseConstraintが処理するため、ここでは何もしない
+            return;
+        } else if (isDrawingRef.current && cursorMode === 'eraser') {
             // 消しゴムモードではドラッグしながら消す
             eraseAtPosition(x, y);
-        } else if (isDrawingRef.current) {
+        } else if (isDrawingRef.current && cursorMode === 'draw') {
             // 描画モード
             if (lastPointRef.current) {
                 const dx = x - lastPointRef.current.x;
@@ -417,7 +457,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
                     WebkitTouchCallout: 'none', // スクロール防止
-                    cursor: isEraserMode ? 'pointer' : 'crosshair'
+                    cursor: cursorMode === 'grab' ? 'grab' : (cursorMode === 'eraser' ? 'pointer' : 'crosshair')
                 }}
                 onPointerDown={handlePointerDown}
                 onPointerMove={handlePointerMove}
@@ -514,23 +554,54 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 >
                     ⚽ ボールを追加
                 </button>
+                <div style={{ width: '100%', height: '8px' }}></div>
                 <button
-                    onClick={() => setIsEraserMode(!isEraserMode)}
+                    onClick={() => setCursorMode('draw')}
                     style={{
                         padding: '8px 16px',
                         fontSize: '14px',
-                        backgroundColor: isEraserMode ? '#ffffff' : '#2d5016',
-                        color: isEraserMode ? '#2d5016' : '#ffffff',
-                        border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        backgroundColor: cursorMode === 'draw' ? '#ffffff' : '#2d5016',
+                        color: cursorMode === 'draw' ? '#2d5016' : '#ffffff',
+                        border: '1px solid #ffffff',
+                        borderRadius: '20px',
                         cursor: 'pointer',
-                        fontWeight: 'bold',
-                        touchAction: 'manipulation',
-                        minWidth: '100px'
+                        whiteSpace: 'nowrap'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
-                    {isEraserMode ? '✏️ 描画' : '🧹 消しゴム'}
+                    ✏️ 鉛筆
+                </button>
+                <button
+                    onClick={() => setCursorMode('grab')}
+                    style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        backgroundColor: cursorMode === 'grab' ? '#ffffff' : '#2d5016',
+                        color: cursorMode === 'grab' ? '#2d5016' : '#ffffff',
+                        border: '1px solid #ffffff',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    ✋ 手
+                </button>
+                <button
+                    onClick={() => setCursorMode('eraser')}
+                    style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        backgroundColor: cursorMode === 'eraser' ? '#ffffff' : '#2d5016',
+                        color: cursorMode === 'eraser' ? '#2d5016' : '#ffffff',
+                        border: '1px solid #ffffff',
+                        borderRadius: '20px',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    🧹 消しゴム
                 </button>
                 <button
                     onClick={handleClear}
