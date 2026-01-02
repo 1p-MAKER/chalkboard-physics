@@ -25,130 +25,29 @@ export function createEntity(x: number, y: number): Matter.Body {
 
 /**
  * 人型キャラクター（エンティティ）を生成する
- * 頭、体、足で構成された複合体、回転を防止して直立状態を維持
+ * シンプルな1つの長方形として実装（確実に動作させるため）
  */
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
-    const { Bodies, Body } = Matter;
+    const { Bodies } = Matter;
 
-    // 各パーツを作成（visible: falseでMatter.jsのデフォルトレンダリングを無効化）
-    // 頭（円形）
-    const head = Bodies.circle(x, y - 30, 10, {
+    // シンプルな人型（1つの長方形）
+    const humanoid = Bodies.rectangle(x, y, 20, 50, {
         restitution: 0.3,
-        friction: 0.5,
-        density: 0.001,
-        render: {
-            visible: false // カスタムレンダリングのみ使用
-        }
-    });
-
-    // 胴体（長方形）
-    const torso = Bodies.rectangle(x, y, 16, 30, {
-        restitution: 0.3,
-        friction: 0.5,
+        friction: 0.8,
         density: 0.002,
+        inertia: Infinity, // 回転防止
         render: {
-            visible: false // カスタムレンダリングのみ使用
+            fillStyle: '#ffcccc', // ピンク色で識別しやすく
+            strokeStyle: '#ffffff',
+            lineWidth: 3
         }
     });
 
-    // 左足（小さい長方形）
-    const leftLeg = Bodies.rectangle(x - 6, y + 20, 6, 10, {
-        restitution: 0.3,
-        friction: 0.5,
-        density: 0.001,
-        render: {
-            visible: false // カスタムレンダリングのみ使用
-        }
-    });
-
-    // 右足（小さい長方形）
-    const rightLeg = Bodies.rectangle(x + 6, y + 20, 6, 10, {
-        restitution: 0.3,
-        friction: 0.5,
-        density: 0.001,
-        render: {
-            visible: false // カスタムレンダリングのみ使用
-        }
-    });
-
-    // 複合体として結合（回転を防止）
-    const humanoid = Body.create({
-        parts: [torso, head, leftLeg, rightLeg],
-        inertia: Infinity, // 回転を完全に防止
-    });
-
-    // 人型キャラクター専用のカスタムデータを追加
+    // カスタムデータ
     (humanoid as any).isHumanoid = true;
-    (humanoid as any).legPhase = 0; // 歩行アニメーション用
+    (humanoid as any).legPhase = 0;
 
     return humanoid;
-}
-
-/**
- * 人型キャラクターを描画（カスタムレンダリング）
- */
-export function renderHumanoid(
-    context: CanvasRenderingContext2D,
-    humanoid: Matter.Body,
-    legPhase: number
-) {
-    const pos = humanoid.position;
-
-    context.save();
-    context.translate(pos.x, pos.y);
-
-    // 体（長方形）
-    context.fillStyle = '#ffffff';
-    context.strokeStyle = '#333333';
-    context.lineWidth = 2;
-    context.fillRect(-8, -15, 16, 30);
-    context.strokeRect(-8, -15, 16, 30);
-
-    // 頭（円）
-    context.beginPath();
-    context.arc(0, -30, 10, 0, Math.PI * 2);
-    context.fill();
-    context.stroke();
-
-    // 目
-    context.fillStyle = '#333333';
-    context.beginPath();
-    context.arc(-3, -32, 2, 0, Math.PI * 2);
-    context.fill();
-    context.beginPath();
-    context.arc(3, -32, 2, 0, Math.PI * 2);
-    context.fill();
-
-    // 歩行アニメーション用の足の位置計算
-    const leftLegOffset = Math.sin(legPhase) * 5;
-    const rightLegOffset = Math.sin(legPhase + Math.PI) * 5;
-
-    // 左足
-    context.fillStyle = '#ffffff';
-    context.strokeStyle = '#333333';
-    context.lineWidth = 2;
-    context.fillRect(-9 + leftLegOffset, 15, 6, 10);
-    context.strokeRect(-9 + leftLegOffset, 15, 6, 10);
-
-    // 右足
-    context.fillRect(3 + rightLegOffset, 15, 6, 10);
-    context.strokeRect(3 + rightLegOffset, 15, 6, 10);
-
-    // 左手
-    context.strokeStyle = '#ffffff';
-    context.lineWidth = 3;
-    context.beginPath();
-    context.moveTo(-8, -5);
-    context.lineTo(-13 - leftLegOffset, 5);
-    context.stroke();
-
-    // 右手
-    context.beginPath();
-    context.moveTo(8, -5);
-    context.lineTo(13 - rightLegOffset, 5);
-    context.stroke();
-
-    context.restore();
 }
 
 /**
@@ -202,14 +101,14 @@ export function getHumanoidSpawnPosition(
         // 左から歩いてくる
         return {
             x: -50,
-            y: canvasHeight - 80, // 地面近く
+            y: canvasHeight - 100, // 地面近く
             direction: 1 // 右向きに歩く
         };
     } else {
         // 右から歩いてくる
         return {
             x: canvasWidth + 50,
-            y: canvasHeight - 80, // 地面近く
+            y: canvasHeight - 100, // 地面近く
             direction: -1 // 左向きに歩く
         };
     }
