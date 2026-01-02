@@ -371,18 +371,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 const dy = y - lastPointRef.current.y;
                 const distance = Math.sqrt(dx * dx + dy * dy);
 
-                // 線を補完して隙間をなくす（より高密度に：5px間隔）
-                const segments = Math.max(1, Math.floor(distance / 5));
+                // 線を補完して隙間をなくす（超高密度に：2px間隔）
+                const segments = Math.max(1, Math.floor(distance / 2));
 
                 for (let i = 0; i < segments; i++) {
                     const t = i / segments;
                     const px = lastPointRef.current.x + dx * t;
                     const py = lastPointRef.current.y + dy * t;
 
-                    // チョーク風のランダムなズレを加える
-                    const offset = (Math.random() - 0.5) * 2;
+                    // チョーク風のランダムなズレ（少し控えめに）
+                    const offset = (Math.random() - 0.5) * 1.5;
 
-                    const wall = Matter.Bodies.circle(px + offset, py + offset, 4, {
+                    const wall = Matter.Bodies.circle(px + offset, py + offset, 3, {
                         isStatic: true,
                         restitution: 0.9,
                         friction: 0.5,
