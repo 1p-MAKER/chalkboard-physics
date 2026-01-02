@@ -217,6 +217,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
     // 人型キャラクターを手動で追加
     const spawnHumanoid = () => {
+        alert('人を追加ボタンが押されました！');
         if (!engineRef.current || !canvasRef.current) return;
 
         const canvas = canvasRef.current;
