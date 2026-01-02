@@ -356,6 +356,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         } else if (cursorMode === 'eraser') {
             // 消しゴムモード: タップした位置の壁を削除
             eraseAtPosition(x, y);
+            isDrawingRef.current = true; // ドラッグ消去を有効化
         } else {
             // 描画モード
             isDrawingRef.current = true;
