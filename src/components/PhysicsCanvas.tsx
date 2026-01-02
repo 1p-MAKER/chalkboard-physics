@@ -537,73 +537,88 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 onPointerUp={handlePointerUp}
                 onPointerLeave={handlePointerUp}
             />
-            {/* ボタンコンテナ - 上部中央（ノッチを避ける） */}
+            {/* ボタンコンテナ - 上部スクロール可能エリア */}
             <div
                 style={{
                     position: 'absolute',
                     top: '50px', // ノッチを避けるため下に移動
-                    left: '50%',
-                    transform: 'translateX(-50%)',
+                    left: '0',
+                    width: '100%',
                     display: 'flex',
-                    gap: '8px',
+                    gap: '12px',
                     alignItems: 'center',
-                    flexWrap: 'wrap',
-                    justifyContent: 'center',
-                    maxWidth: '95%',
+                    flexWrap: 'nowrap', // 折り返しなし
+                    overflowX: 'auto', // 横スクロール有効
+                    padding: '0 16px 16px 16px', // スクロールバーのためのパディングと左右の余白
+                    justifyContent: 'flex-start', // 左詰めでスクロール開始
                     userSelect: 'none',
                     WebkitUserSelect: 'none',
-                    WebkitTouchCallout: 'none'
+                    WebkitTouchCallout: 'none',
+                    WebkitOverflowScrolling: 'touch', // スムーズスクロール
+                    scrollbarWidth: 'none', // Firefox用スクロールバー非表示
+                    msOverflowStyle: 'none' // IE/Edge用
                 }}
+                onPointerDown={(e) => e.stopPropagation()}
             >
+                <style jsx>{`
+                    div::-webkit-scrollbar {
+                        display: none; /* Chrome/Safari用スクロールバー非表示 */
+                    }
+                `}</style>
+
                 <button
                     onClick={() => setIsSpawning(!isSpawning)}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: isSpawning ? '#2d5016' : '#ffffff',
                         color: isSpawning ? '#ffffff' : '#2d5016',
                         border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        borderRadius: '20px', // 丸みを帯びたデザイン
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         touchAction: 'manipulation',
-                        minWidth: '100px'
+                        flexShrink: 0, // 縮小しない
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
-                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
                 </button>
                 <button
                     onClick={spawnHumanoid}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        borderRadius: '20px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         touchAction: 'manipulation',
-                        minWidth: '100px'
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
-                    onPointerDown={(e) => e.stopPropagation()}
                 >
                     🚶 人を追加
                 </button>
                 <button
                     onClick={spawnLadder}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        borderRadius: '20px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         touchAction: 'manipulation',
-                        minWidth: '100px'
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -612,33 +627,39 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={spawnBall}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        borderRadius: '20px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         touchAction: 'manipulation',
-                        minWidth: '120px'
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
                     ⚽ ボールを追加
                 </button>
-                <div style={{ width: '100%', height: '8px' }}></div>
+
                 <button
                     onClick={() => setCursorMode('draw')}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: cursorMode === 'draw' ? '#ffffff' : '#2d5016',
                         color: cursorMode === 'draw' ? '#2d5016' : '#ffffff',
-                        border: '1px solid #ffffff',
+                        border: '2px solid #ffffff', // 枠線を統一
                         borderRadius: '20px',
                         cursor: 'pointer',
-                        whiteSpace: 'nowrap'
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -647,14 +668,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={() => setCursorMode('grab')}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: cursorMode === 'grab' ? '#ffffff' : '#2d5016',
                         color: cursorMode === 'grab' ? '#2d5016' : '#ffffff',
-                        border: '1px solid #ffffff',
+                        border: '2px solid #ffffff',
                         borderRadius: '20px',
                         cursor: 'pointer',
-                        whiteSpace: 'nowrap'
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -663,14 +688,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={() => setCursorMode('eraser')}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: cursorMode === 'eraser' ? '#ffffff' : '#2d5016',
                         color: cursorMode === 'eraser' ? '#2d5016' : '#ffffff',
-                        border: '1px solid #ffffff',
+                        border: '2px solid #ffffff',
                         borderRadius: '20px',
                         cursor: 'pointer',
-                        whiteSpace: 'nowrap'
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation',
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
@@ -679,16 +708,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 <button
                     onClick={handleClear}
                     style={{
-                        padding: '8px 16px',
+                        padding: '10px 18px',
                         fontSize: '14px',
                         backgroundColor: '#2d5016',
                         color: '#ffffff',
                         border: '2px solid #ffffff',
-                        borderRadius: '6px',
+                        borderRadius: '20px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
                         touchAction: 'manipulation',
-                        minWidth: '80px'
+                        flexShrink: 0,
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                     }}
                     onPointerDown={(e) => e.stopPropagation()}
                 >
