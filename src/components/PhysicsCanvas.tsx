@@ -473,6 +473,24 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     🚶 人を追加
                 </button>
                 <button
+                    onClick={spawnLadder}
+                    style={{
+                        padding: '8px 16px',
+                        fontSize: '14px',
+                        backgroundColor: '#2d5016',
+                        color: '#ffffff',
+                        border: '2px solid #ffffff',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 'bold',
+                        touchAction: 'manipulation',
+                        minWidth: '100px'
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                >
+                    🪜 ハシゴ
+                </button>
+                <button
                     onClick={spawnBall}
                     style={{
                         padding: '8px 16px',
