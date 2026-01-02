@@ -95,18 +95,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
         });
 
-        // カスタムレンダリング（人型キャラクターを個別に描画）
-        Events.on(render, 'afterRender', () => {
-            const context = render.context;
-
-            humanoidDataRef.current.forEach(humanoidData => {
-                const humanoid = humanoidData.body;
-
-                // カスタムレンダリング
-                // renderHumanoid(context, humanoid, humanoidData.legPhase);
-            });
-        });
-
         // エンティティの自動生成
         const spawnEntity = () => {
             if (!isSpawning) return;
