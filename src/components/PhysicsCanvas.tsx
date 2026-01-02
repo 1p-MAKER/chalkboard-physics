@@ -85,9 +85,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         });
         renderRef.current = render;
 
-        // Ground (Visible)
+        // Ground (Visible) - Shifted Up for Toolbar
         const groundHeight = 80;
-        const ground = Bodies.rectangle(width / 2, height - (groundHeight / 2) + 10, width, groundHeight, {
+        const groundY = height - 120; // ツールバーのスペースを確保
+        const ground = Bodies.rectangle(width / 2, groundY, width, groundHeight, {
             isStatic: true,
             label: 'Ground',
             render: {
@@ -308,7 +309,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             canvas.height = h;
             render.options.width = w;
             render.options.height = h;
-            Matter.Body.setPosition(ground, { x: w / 2, y: h - (groundHeight / 2) + 10 });
+            Matter.Body.setPosition(ground, { x: w / 2, y: h - 120 });
+            Matter.Body.setVertices(ground, Matter.Bodies.rectangle(w / 2, h - 120, w, groundHeight).vertices); // 幅変更対応
         });
         ob.observe(canvas);
 
@@ -449,18 +451,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             <div
                 style={{
                     position: 'absolute',
-                    top: '0',
+                    bottom: '0', // 下部に配置
                     left: 0,
                     width: '100%',
-                    height: '110px', // 少し高さを確保
+                    height: '110px',
                     display: 'flex',
                     flexDirection: 'column',
-                    justifyContent: 'flex-end',
-                    paddingBottom: '10px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.2)', // ツールバーの存在を示す薄い黒
-                    backdropFilter: 'blur(8px)', // 高級感のあるボケ
+                    justifyContent: 'center', // 上下中央寄せ
+                    paddingBottom: '20px', // iPhoneのホームバー回避
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                    backdropFilter: 'blur(8px)',
                     WebkitBackdropFilter: 'blur(8px)',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.1)', // 上線に変更
                     zIndex: 10,
                     overflowX: 'auto',
                     WebkitOverflowScrolling: 'touch',
