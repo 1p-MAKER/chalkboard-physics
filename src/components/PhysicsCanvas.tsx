@@ -30,8 +30,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const aiIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const mouseConstraintRef = useRef<Matter.MouseConstraint | null>(null);
+    const isSpawningRef = useRef(true); // Refで最新状態を管理
     const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
-    const [isSpawning, setIsSpawning] = useState(true); // スタート/ストップ状態
+    const [isSpawning, setIsSpawning] = useState(true); // UI表示用
+
+    // isSpawning変更時にRefも更新
+    const toggleSpawning = () => {
+        const newState = !isSpawning;
+        setIsSpawning(newState);
+        isSpawningRef.current = newState;
+    };
 
     useEffect(() => {
         if (!canvasRef.current) return;
@@ -46,9 +54,28 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         // Matter.js エンジンとレンダラーの初期化
         const { Engine, Render, Runner, World, Bodies, Events, MouseConstraint, Mouse } = Matter;
 
+        // 既存のエンジンがあれば破棄（厳重なチェック）
+        if (engineRef.current) {
+            World.clear(engineRef.current.world, false);
+            Engine.clear(engineRef.current);
+            engineRef.current = null;
+        }
+        if (renderRef.current) {
+            Render.stop(renderRef.current);
+            if (renderRef.current.canvas) {
+                // ここではremoveしない
+            }
+            renderRef.current = null;
+        }
+        if (runnerRef.current) {
+            Runner.stop(runnerRef.current);
+            runnerRef.current = null;
+        }
+
         const engine = Engine.create({
             gravity: { x: 0, y: 1, scale: 0.001 }
         });
+        engineRef.current = engine;
 
         const render = Render.create({
             canvas: canvas,
@@ -60,6 +87,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 background: '#2d5016', // 黒板の緑色
             }
         });
+        renderRef.current = render;
 
         // 壁（床）
         const ground = Bodies.rectangle(width / 2, height + 10, width, 60, {
@@ -90,7 +118,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             World.add(engine.world, bubble);
             entitiesRef.current.push(bubble);
         }
-        renderRef.current = render;
 
         // マウス操作（グラブ）の設定
         const mouse = Mouse.create(render.canvas);
@@ -104,11 +131,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             }
         });
         mouseConstraintRef.current = mouseConstraint;
-
-        // 初期モードに応じた設定
-        if (cursorMode === 'grab') {
-            World.add(engine.world, mouseConstraint);
-        }
+        World.add(engine.world, mouseConstraint); // デフォルトで追加しておき、必要なら触れなくする
 
         const runner = Runner.create();
         runnerRef.current = runner;
@@ -130,6 +153,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         // 物理演算更新前の処理
         Events.on(engine, 'beforeUpdate', () => {
+            // グラブモードでない場合、マウス制約を無効化（bodyBをnullにするなど）
+            // しかし追加/削除の方が確実なので、useEffect([cursorMode])で行う
+
             // ハシゴの回転を防止（常に縦向き）
             const bodies = Matter.Composite.allBodies(engine.world);
             bodies.forEach(body => {
@@ -142,7 +168,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         // エンティティの自動生成
         const spawnEntity = () => {
-            if (!isSpawning) return;
+            // Refを参照して最新の状態を確認
+            if (!isSpawningRef.current) return;
 
             const isHumanoid = Math.random() > 0.5;
 
@@ -172,7 +199,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         // ランダムなタイミングでエンティティを生成
         spawnIntervalRef.current = setInterval(() => {
-            if (isSpawning && Math.random() > 0.5) {
+            if (isSpawningRef.current && Math.random() > 0.5) {
                 spawnEntity();
             }
         }, 2000);
@@ -325,6 +352,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         // リサイズ監視
         const resizeObserver = new ResizeObserver(() => {
             if (!canvas || !render || !engine) return;
+            // リサイズ時もフォールバック
             const newWidth = canvas.clientWidth || window.innerWidth;
             const newHeight = canvas.clientHeight || window.innerHeight;
 
@@ -334,6 +362,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             render.options.height = newHeight;
             render.bounds.max.x = newWidth;
             render.bounds.max.y = newHeight;
+
+            // 床の位置も更新
+            Matter.Body.setPosition(ground, { x: newWidth / 2, y: newHeight + 30 });
+            // 幅の更新には頂点の再計算等が必要だが、Body.setVerticesなどは複雑なので
+            // 簡易的に位置調整のみとする。あるいはスケールで対応
         });
         resizeObserver.observe(canvas);
 
@@ -354,8 +387,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
             // イベントリスナーの解除などはMatterが管理していれば不要だが、
             // ReactのStrict Modeでの二重起動を防ぐためにもクリーンアップは重要
+            // 重要: render.canvas.remove() は絶対に呼ばない
         };
-    }, [isSpawning]);
+    }, []); // 依存配列は空（マウント時のみ実行）
     // カーソルモード変更時の副作用
     useEffect(() => {
         if (!engineRef.current || !mouseConstraintRef.current) return;
@@ -591,7 +625,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 `}</style>
 
                 <button
-                    onClick={() => setIsSpawning(!isSpawning)}
+                    onClick={toggleSpawning}
                     style={{
                         padding: '10px 18px',
                         fontSize: '14px',
