@@ -59,12 +59,17 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             }
         });
 
-        // 境界の壁を作成（画面の下部のみ、見えない壁）
-        const ground = Bodies.rectangle(width / 2, height + 25, width, 50, {
+        // 見える地面を作成（画面下部、白い線）
+        const groundY = height - 30; // 画面下部から少し上
+        const ground = Bodies.rectangle(width / 2, groundY, width, 10, {
             isStatic: true,
-            restitution: 0.9,
-            friction: 0.5, // 地面との摩擦を上げる
-            render: { fillStyle: 'transparent' }
+            restitution: 0.3,
+            friction: 0.8, // 地面との摩擦を上げる
+            render: {
+                fillStyle: '#ffffff', // 白い地面
+                strokeStyle: '#ffffff',
+                lineWidth: 2
+            }
         });
 
         World.add(engine.world, [ground]);
