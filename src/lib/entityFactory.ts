@@ -25,29 +25,98 @@ export function createEntity(x: number, y: number): Matter.Body {
 
 /**
  * 人型キャラクター（エンティティ）を生成する
- * シンプルな1つの長方形として実装（確実に動作させるため）
+ * 1つの長方形として実装、カスタムレンダリングで人型に見せる
  */
 export function createHumanoidEntity(x: number, y: number): Matter.Body {
     const { Bodies } = Matter;
 
-    // シンプルな人型（1つの長方形）- サイズを大きく、色を目立つ赤色に
-    const humanoid = Bodies.rectangle(x, y, 40, 80, {
+    // 人型（1つの長方形）
+    const humanoid = Bodies.rectangle(x, y, 30, 60, {
         restitution: 0.3,
         friction: 0.8,
         density: 0.002,
         inertia: Infinity, // 回転防止
         render: {
-            fillStyle: '#ff0000', // 赤色で非常に目立つ
-            strokeStyle: '#ffffff',
-            lineWidth: 5 // 太い枠線
+            fillStyle: 'transparent', // カスタムレンダリングで描画するため透明に
         }
     });
 
     // カスタムデータ
     (humanoid as any).isHumanoid = true;
     (humanoid as any).legPhase = 0;
+    (humanoid as any).direction = 1;
 
     return humanoid;
+}
+
+/**
+ * 人型キャラクターを描画（カスタムレンダリング）
+ */
+export function renderHumanoid(
+    context: CanvasRenderingContext2D,
+    humanoid: Matter.Body,
+    legPhase: number,
+    direction: number
+) {
+    const pos = humanoid.position;
+
+    context.save();
+    context.translate(pos.x, pos.y);
+
+    // 体（長方形）
+    context.fillStyle = '#ffffff';
+    context.strokeStyle = '#333333';
+    context.lineWidth = 2;
+    context.fillRect(-10, -20, 20, 40);
+    context.strokeRect(-10, -20, 20, 40);
+
+    // 頭（円）
+    context.beginPath();
+    context.arc(0, -32, 8, 0, Math.PI * 2);
+    context.fill();
+    context.stroke();
+
+    // 目
+    context.fillStyle = '#333333';
+    context.beginPath();
+    context.arc(-3, -34, 1.5, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath();
+    context.arc(3, -34, 1.5, 0, Math.PI * 2);
+    context.fill();
+
+    // 歩行アニメーション用の足の位置計算
+    const leftLegOffset = Math.sin(legPhase) * 5;
+    const rightLegOffset = Math.sin(legPhase + Math.PI) * 5;
+
+    // 左足
+    context.strokeStyle = '#ffffff';
+    context.lineWidth = 4;
+    context.beginPath();
+    context.moveTo(-5, 20);
+    context.lineTo(-5 + leftLegOffset, 35);
+    context.stroke();
+
+    // 右足
+    context.beginPath();
+    context.moveTo(5, 20);
+    context.lineTo(5 + rightLegOffset, 35);
+    context.stroke();
+
+    // 左手
+    context.lineWidth = 3;
+    context.beginPath();
+    context.moveTo(-10, -10);
+    context.lineTo(-15 - rightLegOffset, 5);
+    context.stroke();
+
+    // 右手
+    context.beginPath();
+    context.moveTo(10, -10);
+    context.lineTo(15 - leftLegOffset, 5);
+    context.stroke();
+
+    context.restore();
 }
 
 /**

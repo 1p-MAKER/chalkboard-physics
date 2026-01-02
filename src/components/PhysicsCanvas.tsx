@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Matter from 'matter-js';
-import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition } from '@/lib/entityFactory';
+import { createEntity, createHumanoidEntity, getRandomSpawnPosition, getHumanoidSpawnPosition, renderHumanoid } from '@/lib/entityFactory';
 
 interface PhysicsCanvasProps {
     onClear: () => void;
@@ -82,6 +82,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         Render.run(render);
         Runner.run(runner, engine);
+
+        // カスタムレンダリング（人型キャラクターを個別に描画）
+        Events.on(render, 'afterRender', () => {
+            const context = render.context;
+
+            humanoidDataRef.current.forEach(humanoidData => {
+                const humanoid = humanoidData.body;
+
+                // カスタムレンダリング
+                renderHumanoid(context, humanoid, humanoidData.legPhase, humanoidData.direction);
+            });
+        });
 
         // カスタムレンダリング（人型キャラクターを個別に描画）
         Events.on(render, 'afterRender', () => {
