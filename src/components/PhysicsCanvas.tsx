@@ -392,18 +392,29 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             <div
                 style={{
                     position: 'absolute',
-                    top: '40px',
+                    top: '0',
                     left: 0,
                     width: '100%',
+                    height: '110px', // 少し高さを確保
                     display: 'flex',
-                    gap: '10px',
-                    padding: '10px 20px',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    paddingBottom: '10px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.2)', // ツールバーの存在を示す薄い黒
+                    backdropFilter: 'blur(8px)', // 高級感のあるボケ
+                    WebkitBackdropFilter: 'blur(8px)',
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+                    zIndex: 10,
                     overflowX: 'auto',
                     WebkitOverflowScrolling: 'touch',
-                    pointerEvents: 'none' // Container doesn't block
                 }}
             >
-                <div style={{ display: 'flex', gap: '10px', pointerEvents: 'auto' }}>
+                <div style={{
+                    display: 'inline-flex', // 横に並べる
+                    gap: '12px',
+                    padding: '0 20px',
+                    minWidth: 'max-content' // コンテンツに合わせて広がる
+                }}>
                     <button onClick={toggleSpawning} style={btnStyle(!isSpawning)}>
                         {isSpawning ? '⏸️ ストップ' : '▶️ スタート'}
                     </button>
