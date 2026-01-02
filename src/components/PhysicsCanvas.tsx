@@ -422,9 +422,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     };
 
     // 描画機能
-    // 描画機能
     const handlePointerDown = (e: React.PointerEvent) => {
         if (!canvasRef.current || !engineRef.current) return;
+
+        // ポインターキャプチャを設定: 画面外に出ても操作を継続
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -495,9 +497,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         }
     };
 
-    const handlePointerUp = () => {
+    const handlePointerUp = (e: React.PointerEvent) => {
         isDrawingRef.current = false;
         lastPointRef.current = null;
+        // ポインターキャプチャ解除
+        (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     };
 
     // 消しゴム機能: 指定位置の壁を削除
@@ -672,7 +676,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         fontSize: '14px',
                         backgroundColor: cursorMode === 'draw' ? '#ffffff' : '#2d5016',
                         color: cursorMode === 'draw' ? '#2d5016' : '#ffffff',
-                        border: '2px solid #ffffff', // 枠線を統一
+                        border: cursorMode === 'draw' ? '3px solid #ffff00' : '2px solid #ffffff', // 選択中は黄色く太い枠線
                         borderRadius: '20px',
                         cursor: 'pointer',
                         fontWeight: 'bold',
