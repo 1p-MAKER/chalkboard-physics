@@ -411,7 +411,7 @@ export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
         inertia: Infinity, // 回転しない（無限の慣性モーメント）
         collisionFilter: {
             category: CATEGORY_DEFAULT, // 普通の壁扱い
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER
         },
         render: {
             fillStyle: '#DEB887', // BurlyWood (木材)
