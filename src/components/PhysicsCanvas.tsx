@@ -8,6 +8,7 @@ import {
     createLadderEntity,
     createCloudEntity,
     createBubbleEntity,
+    createFloatingBarEntity,
     getRandomSpawnPosition,
     getHumanoidSpawnPosition,
     renderHumanoid
@@ -192,7 +193,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
             bodies.forEach(body => {
                 // Keep ladders upright
-                if (body.label === 'Ladder') {
+                if (body.label === 'Ladder' || body.label === 'FloatingBar') {
                     Matter.Body.setAngle(body, 0);
                     Matter.Body.setAngularVelocity(body, 0);
                 }
@@ -570,6 +571,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         entitiesRef.current.push(body);
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>⚽</button>
+
+                    <button onClick={() => {
+                        const bar = createFloatingBarEntity(
+                            (canvasRef.current?.width || 800) / 2,
+                            (canvasRef.current?.height || 600) / 2
+                        );
+                        Matter.World.add(engineRef.current!.world, bar);
+                        entitiesRef.current.push(bar);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🪵</button>
 
                     <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
                     <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>

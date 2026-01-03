@@ -394,3 +394,35 @@ export function getHumanoidSpawnPosition(
         };
     }
 }
+
+/**
+ * 常に水平を保つ浮遊する木の棒（エンティティ）を生成する
+ * 空中の足場として機能する
+ */
+export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
+    const width = 120;
+    const height = 15;
+
+    const bar = MatterJS.Bodies.rectangle(x, y, width, height, {
+        restitution: 0.2, // あまり跳ねない
+        friction: 0.8,    // 滑りにくい
+        frictionAir: 0.1, // 空気抵抗大（浮かんでいる感）
+        density: 0.01,    // 重めにして小人が乗っても安定させる
+        inertia: Infinity, // 回転しない（無限の慣性モーメント）
+        collisionFilter: {
+            category: CATEGORY_DEFAULT, // 普通の壁扱い
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID
+        },
+        render: {
+            fillStyle: '#DEB887', // BurlyWood (木材)
+            strokeStyle: '#8B4513', // SaddleBrown (縁取り)
+            lineWidth: 2
+        },
+        label: 'FloatingBar'
+    });
+
+    // カスタムプロパティ：浮遊
+    (bar as any).isFloating = true;
+
+    return bar;
+}
