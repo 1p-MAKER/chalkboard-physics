@@ -9,8 +9,7 @@ import {
     createCloudEntity,
     createBubbleEntity,
     createFloatingBarEntity,
-    createQuestionBlockEntity,
-    createCoinEntity,
+
     getRandomSpawnPosition,
     getHumanoidSpawnPosition,
     renderHumanoid
@@ -200,17 +199,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 }
             });
 
-            // Clean up fallen coins
-            const coins = bodies.filter(b => (b as any).isCoin);
-            coins.forEach(c => {
-                if (c.position.y > engine.world.bounds.max.y + 100) {
-                    Matter.World.remove(engine.world, c);
-                }
-            });
+
 
             bodies.forEach(body => {
                 // Keep ladders and blocks upright
-                if (body.label === 'Ladder' || body.label === 'FloatingBar' || body.label === 'QuestionBlock') {
+                if (body.label === 'Ladder' || body.label === 'FloatingBar') {
                     Matter.Body.setAngle(body, 0);
                     Matter.Body.setAngularVelocity(body, 0);
                 }
@@ -270,50 +263,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
         });
 
-        // Collision Event for Question Blocks
-        Events.on(engine, 'collisionStart', (event) => {
-            const pairs = event.pairs;
-            const now = Date.now();
 
-            pairs.forEach(pair => {
-                const bodyA = pair.bodyA;
-                const bodyB = pair.bodyB;
-
-                // Check dependencies for QuestionBlock
-                let block: Matter.Body | null = null;
-                let hitter: Matter.Body | null = null;
-
-                if ((bodyA as any).isQuestionBlock) {
-                    block = bodyA;
-                    hitter = bodyB;
-                } else if ((bodyB as any).isQuestionBlock) {
-                    block = bodyB;
-                    hitter = bodyA;
-                }
-
-                if (block && hitter) {
-                    // Filter invalid hitters
-                    if (hitter.isStatic || (hitter as any).isCoin || (hitter as any).isBubble || (hitter as any).isQuestionBlock) return;
-
-                    // Condition: Hitter must be below the block
-                    // Block size is 30, center to bottom is 15.
-                    if (hitter.position.y > block.position.y + 10) {
-                        const blockData = block as any;
-                        if (now - blockData.lastHitTime < 800) return; // Cooldown increased
-
-                        // Fire!
-                        blockData.lastHitTime = now;
-                        soundManager.playCoin();
-
-                        // Spawn Coin
-                        const coin = createCoinEntity(block.position.x, block.position.y - 30);
-                        Matter.Body.setVelocity(coin, { x: (Math.random() - 0.5) * 2, y: -12 }); // Pop up higher
-                        Matter.World.add(engine.world, coin);
-                        entitiesRef.current.push(coin);
-                    }
-                }
-            });
-        });
 
         // AI Tick
         const aiInterval = setInterval(() => {
@@ -701,15 +651,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🪵</button>
 
-                    <button onClick={() => {
-                        const width = canvasRef.current?.width || 800;
-                        const height = canvasRef.current?.height || 600;
-                        const randomX = width / 2 + (Math.random() - 0.5) * 200;
-                        const block = createQuestionBlockEntity(randomX, height / 2 - 100);
-                        Matter.World.add(engineRef.current!.world, block);
-                        entitiesRef.current.push(block);
-                        soundManager.playSpawn();
-                    }} style={btnStyle(false)}>📦</button>
+
 
                     <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
                     <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
