@@ -105,7 +105,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 width,
                 height,
                 wireframes: false,
-                background: '#2d5016', // Chalkboard Green
+                background: '#89CFF0', // Sky Blue
             }
         });
         renderRef.current = render;
@@ -117,8 +117,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             isStatic: true,
             label: 'Ground',
             render: {
-                fillStyle: '#ffffff',
-                strokeStyle: '#dddddd',
+                fillStyle: '#90EE90', // Light Green Grass
+                strokeStyle: '#2E8B57', // Sea Green Border
                 lineWidth: 2
             }
         });
@@ -476,9 +476,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         padding: '0 24px', // 横幅を広げる
         height: '60px',    // 高さを60pxに固定（タップしやすく）
         fontSize: '20px',  // 文字サイズアップ
-        backgroundColor: active ? '#ffffff' : '#4a6b22', // 少し明るめの緑に
-        color: active ? '#2d5016' : '#ffffff',
-        border: active ? '4px solid #ffff00' : '3px solid #ffffff',
+        backgroundColor: active ? '#ffffff' : 'rgba(255, 255, 255, 0.3)', // アクティブは白、非アクティブは半透明白
+        color: active ? '#555555' : '#ffffff', // テキスト色調整
+        border: active ? '4px solid #FFD700' : '3px solid rgba(255, 255, 255, 0.8)', // 枠線調整
         borderRadius: '30px', // 丸みを強く
         cursor: 'pointer',
         fontWeight: 'bold' as const,
@@ -517,10 +517,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     flexDirection: 'column',
                     justifyContent: 'center',
                     paddingBottom: '0',
-                    backgroundColor: 'rgba(50, 50, 50, 0.8)', // 濃い目の背景でコントラスト確保
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)', // 明るい半透明
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
-                    borderTop: '2px solid rgba(255, 255, 255, 0.3)',
+                    borderTop: '2px solid rgba(255, 255, 255, 0.5)',
                     zIndex: 20, // 地面より手前に
                     overflowX: 'auto',
                     WebkitOverflowScrolling: 'touch',

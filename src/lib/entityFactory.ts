@@ -281,7 +281,7 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
 
     // トップバー（一番上の平らな台）
     const topBar = MatterJS.Bodies.rectangle(x, y - height / 2 + topBarHeight / 2, width, topBarHeight, {
-        render: { fillStyle: '#ffffff' },
+        render: { fillStyle: '#8B4513' }, // SaddleBrown
         collisionFilter: filter,
         label: 'LadderTop'
     });
@@ -293,13 +293,13 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
 
     // 左のレール
     parts.push(MatterJS.Bodies.rectangle(x - width / 2 + railWidth / 2, railY, railWidth, railHeight, {
-        render: { fillStyle: '#ffffff' },
+        render: { fillStyle: '#8B4513' },
         collisionFilter: filter
     }));
 
     // 右のレール
     parts.push(MatterJS.Bodies.rectangle(x + width / 2 - railWidth / 2, railY, railWidth, railHeight, {
-        render: { fillStyle: '#ffffff' },
+        render: { fillStyle: '#8B4513' },
         collisionFilter: filter
     }));
 
@@ -310,7 +310,7 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
     for (let i = 1; i <= rungCount; i++) {
         const py = (y - height / 2 + topBarHeight) + step * i;
         parts.push(MatterJS.Bodies.rectangle(x, py, width - railWidth * 2, rungHeight, {
-            render: { fillStyle: '#ffffff' },
+            render: { fillStyle: '#DEB887' }, // BurlyWood
             collisionFilter: filter
         }));
     }
