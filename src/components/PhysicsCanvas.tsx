@@ -364,13 +364,20 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 Matter.Body.setAngle(body, 0);
                 Matter.Body.setVelocity(body, { x: data.direction * 2, y: body.velocity.y });
 
-                // Stuck detection
-                if (Math.abs(body.velocity.x) < 0.5 && Math.abs(body.velocity.y) < 0.1) {
+                // Stuck detection & Obstacle Jump
+                if (Math.abs(body.velocity.x) < 0.5 && Math.abs(body.velocity.y) < 0.5) {
                     data.stuckCounter++;
-                    if (data.stuckCounter > 30) {
+
+                    // Attempt to jump over obstacle
+                    if (data.stuckCounter === 15) {
+                        Matter.Body.setVelocity(body, { x: body.velocity.x, y: -9 }); // Jump!
+                        soundManager.playJump();
+                    }
+
+                    // If still stuck significantly longer, turn around
+                    if (data.stuckCounter > 90) {
                         data.direction *= -1;
                         data.stuckCounter = 0;
-                        Matter.Body.applyForce(body, body.position, { x: data.direction * 0.03, y: -0.1 });
                     }
                 } else {
                     data.stuckCounter = 0;
