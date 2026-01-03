@@ -290,6 +290,15 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         }
                     }
                 }
+
+                // Bubble Sway logic
+                if ((body as any).isBubble) {
+                    const time = engine.timing.timestamp;
+                    Matter.Body.applyForce(body, body.position, {
+                        x: Math.sin(time * 0.002) * 0.0005, // Gentle sway
+                        y: -0.00005 // Slight updraft to ensure it rises slowly
+                    });
+                }
             });
         });
 
