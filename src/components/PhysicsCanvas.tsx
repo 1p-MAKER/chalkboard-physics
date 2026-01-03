@@ -295,8 +295,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 if ((body as any).isBubble) {
                     const time = engine.timing.timestamp;
                     Matter.Body.applyForce(body, body.position, {
-                        x: Math.sin(time * 0.002) * 0.0005, // Gentle sway
-                        y: -0.00005 // Slight updraft to ensure it rises slowly
+                        x: Math.sin(time * 0.001) * 0.0002, // Slower, gentler sway
+                        y: -0.00002 // Very slow rise
                     });
                 }
             });
@@ -659,8 +659,11 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     }} style={btnStyle(false)}>🪜</button>
 
                     <button onClick={() => {
-                        const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
-                        const body = createBubbleEntity(spawn.x, spawn.y);
+                        const width = canvasRef.current?.width || 800;
+                        const height = canvasRef.current?.height || 600;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 400;
+                        // Spawn from bottom so it floats up
+                        const body = createBubbleEntity(randomX, height - 100);
                         Matter.World.add(engineRef.current!.world, body);
                         entitiesRef.current.push(body);
                         soundManager.playSpawn();
