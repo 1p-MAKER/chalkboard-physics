@@ -788,7 +788,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                             ・<strong>✋掴む</strong>：描いた物や雲を動かせます。<br />
                             ・<strong>🚶小人</strong>：自動で歩きます。ハシゴも登れます。<br />
                             ・<strong>🫧泡</strong>：小人を包み込んで空へ運びます。<br />
-                            ・<strong>🪄消す</strong>：掃除機（🧹）で消せます。
+                            ・<strong>🪄消す</strong>：消しゴム（🧹）で消せます。
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
