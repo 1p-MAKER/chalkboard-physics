@@ -428,3 +428,63 @@ export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
 
     return bar;
 }
+
+/**
+ * ハテナブロック（エンティティ）
+ * 下から叩くとコインが出る
+ */
+export function createQuestionBlockEntity(x: number, y: number): MatterJS.Body {
+    const size = 40;
+    const block = MatterJS.Bodies.rectangle(x, y, size, size, {
+        restitution: 0.2,
+        friction: 0.8,
+        frictionAir: 0.1,
+        density: 0.01,
+        inertia: Infinity,
+        collisionFilter: {
+            category: CATEGORY_DEFAULT,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER
+        },
+        render: {
+            fillStyle: '#FFD700', // Gold
+            strokeStyle: '#DAA520',
+            lineWidth: 3
+        },
+        label: 'QuestionBlock'
+    });
+
+    (block as any).isFloating = true;
+    (block as any).isFixedFloating = true;
+    (block as any).fixedPosition = { x, y };
+    (block as any).isQuestionBlock = true;
+    (block as any).lastHitTime = 0; // 連打防止用
+
+    return block;
+}
+
+/**
+ * コイン（エンティティ）
+ * 出現してしばらくすると消える演出用
+ */
+export function createCoinEntity(x: number, y: number): MatterJS.Body {
+    const coin = MatterJS.Bodies.circle(x, y, 10, {
+        restitution: 0.8, // よく跳ねる
+        friction: 0.1,
+        density: 0.005,
+        collisionFilter: {
+            category: CATEGORY_DYNAMIC,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC
+        },
+        render: {
+            fillStyle: '#FFFF00', // Yellow
+            strokeStyle: '#FFA500', // Orange
+            lineWidth: 2
+        },
+        label: 'Coin'
+    });
+
+    (coin as any).isCoin = true;
+    (coin as any).spawnTime = Date.now();
+
+    return coin;
+}

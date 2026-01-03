@@ -9,6 +9,8 @@ import {
     createCloudEntity,
     createBubbleEntity,
     createFloatingBarEntity,
+    createQuestionBlockEntity,
+    createCoinEntity,
     getRandomSpawnPosition,
     getHumanoidSpawnPosition,
     renderHumanoid
@@ -192,8 +194,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             });
 
             bodies.forEach(body => {
-                // Keep ladders upright
-                if (body.label === 'Ladder' || body.label === 'FloatingBar') {
+                // Keep ladders and blocks upright
+                if (body.label === 'Ladder' || body.label === 'FloatingBar' || body.label === 'QuestionBlock') {
                     Matter.Body.setAngle(body, 0);
                     Matter.Body.setAngularVelocity(body, 0);
                 }
@@ -608,6 +610,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         entitiesRef.current.push(bar);
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🪵</button>
+
+                    <button onClick={() => {
+                        const width = canvasRef.current?.width || 800;
+                        const height = canvasRef.current?.height || 600;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 200;
+                        const block = createQuestionBlockEntity(randomX, height / 2 - 100);
+                        Matter.World.add(engineRef.current!.world, block);
+                        entitiesRef.current.push(block);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>📦</button>
 
                     <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
                     <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
