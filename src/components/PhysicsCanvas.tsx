@@ -577,31 +577,46 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     bottom: '0',
                     left: 0,
                     width: '100%',
-                    height: '120px', // 地面と同じ高さに合わせる
+                    height: '110px', // 少し高さを抑える
                     display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    paddingBottom: '0',
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)', // 明るい半透明
+                    flexDirection: 'row', // 横並び
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
                     backdropFilter: 'blur(10px)',
                     WebkitBackdropFilter: 'blur(10px)',
                     borderTop: '2px solid rgba(255, 255, 255, 0.5)',
-                    zIndex: 20, // 地面より手前に
-                    overflowX: 'auto',
-                    WebkitOverflowScrolling: 'touch',
+                    zIndex: 20,
                 }}
             >
+                {/* Left: Fixed Tools (Draw, Grab) */}
                 <div style={{
-                    display: 'inline-flex',
-                    gap: '16px', // 間隔を広げる
-                    padding: '0 24px',
-                    minWidth: 'max-content',
+                    display: 'flex',
+                    gap: '12px',
+                    padding: '0 16px',
+                    borderRight: '2px solid rgba(255,255,255,0.4)',
                     height: '100%',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    flexShrink: 0, // 固定
+                    backgroundColor: 'rgba(255,255,255,0.1)'
                 }}>
-                    <button onClick={togglePause} style={btnStyle(!isPlaying)}>
-                        {isPlaying ? '⏸️' : '▶️'}
-                    </button>
+                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
+                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
+                </div>
+
+                {/* Right: Scrollable Items */}
+                <div style={{
+                    display: 'flex',
+                    gap: '16px',
+                    padding: '0 24px',
+                    height: '100%',
+                    alignItems: 'center',
+                    overflowX: 'auto',
+                    WebkitOverflowScrolling: 'touch',
+                    flexGrow: 1, // 残りの幅を使う
+                }}>
+                    {/* Items Order: Humanoid -> Ball -> Ladder -> Wood -> Bubble -> Broom -> Trash -> Volume -> Pause */}
+
+                    {/* Humanoid */}
                     <button onClick={() => {
                         const width = canvasRef.current?.width || 800;
                         const spawn = getHumanoidSpawnPosition(width, 600);
@@ -612,6 +627,17 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🚶</button>
 
+                    {/* Ball */}
+                    <button onClick={() => {
+                        const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
+                        const body = createEntity(spawn.x, spawn.y);
+                        Matter.Body.setVelocity(body, { x: spawn.vx, y: spawn.vy });
+                        Matter.World.add(engineRef.current!.world, body);
+                        entitiesRef.current.push(body);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>⚽</button>
+
+                    {/* Ladder */}
                     <button onClick={() => {
                         const width = canvasRef.current?.width || 800;
                         const randomX = width / 2 + (Math.random() - 0.5) * 200; // Random X offset
@@ -621,6 +647,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🪜</button>
 
+                    {/* Wood (Floating Bar) */}
+                    <button onClick={() => {
+                        const width = canvasRef.current?.width || 800;
+                        const height = canvasRef.current?.height || 600;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 200; // Random X offset
+                        const bar = createFloatingBarEntity(randomX, height / 2);
+                        Matter.World.add(engineRef.current!.world, bar);
+                        entitiesRef.current.push(bar);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🪵</button>
+
+                    {/* Bubble */}
                     <button onClick={() => {
                         const width = canvasRef.current?.width || 800;
                         const height = canvasRef.current?.height || 600;
@@ -632,51 +670,30 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🫧</button>
 
-                    <button onClick={() => {
-                        const spawn = getRandomSpawnPosition(canvasRef.current?.width || 800, 600);
-                        const body = createEntity(spawn.x, spawn.y);
-                        Matter.Body.setVelocity(body, { x: spawn.vx, y: spawn.vy });
-                        Matter.World.add(engineRef.current!.world, body);
-                        entitiesRef.current.push(body);
-                        soundManager.playSpawn();
-                    }} style={btnStyle(false)}>⚽</button>
-
-                    <button onClick={() => {
-                        const width = canvasRef.current?.width || 800;
-                        const height = canvasRef.current?.height || 600;
-                        const randomX = width / 2 + (Math.random() - 0.5) * 200; // Random X offset
-                        const bar = createFloatingBarEntity(randomX, height / 2);
-                        Matter.World.add(engineRef.current!.world, bar);
-                        entitiesRef.current.push(bar);
-                        soundManager.playSpawn();
-                    }} style={btnStyle(false)}>🪵</button>
-
-
-
-                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
-                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
+                    {/* Broom (Eraser Mode) */}
                     <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹</button>
+
+                    {/* Trash (Clear All) */}
                     <button onClick={handleClear} style={btnStyle(false)}>🗑️</button>
 
-                    {/* Mute Button */}
+                    {/* Volume */}
                     <button
                         onPointerDown={toggleMute}
                         style={{
-                            width: '60px',
-                            height: '60px',
+                            ...btnStyle(false),
+                            width: '60px', // Circle override
+                            padding: 0,
                             borderRadius: '50%',
                             backgroundColor: isMuted ? 'rgba(255,100,100,0.8)' : 'rgba(255,255,255,0.8)',
                             border: 'none',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '30px',
-                            cursor: 'pointer',
-                            boxShadow: '0 4px 6px rgba(0,0,0,0.3)',
-                            flexShrink: 0
                         }}
                     >
                         {isMuted ? '🔇' : '🔊'}
+                    </button>
+
+                    {/* Pause/Play */}
+                    <button onClick={togglePause} style={btnStyle(!isPlaying)}>
+                        {isPlaying ? '⏸️' : '▶️'}
                     </button>
                 </div>
             </div>
