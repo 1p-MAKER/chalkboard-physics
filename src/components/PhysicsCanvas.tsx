@@ -294,9 +294,12 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 // Bubble Sway logic
                 if ((body as any).isBubble) {
                     const time = engine.timing.timestamp;
+                    const phase = (body as any).swayPhase || 0;
+                    const drift = (body as any).driftX || 0;
+
                     Matter.Body.applyForce(body, body.position, {
-                        x: Math.sin(time * 0.001) * 0.0002, // Slower, gentler sway
-                        y: -0.00002 // Very slow rise
+                        x: drift, // Constant horizontal drift
+                        y: Math.sin(time * 0.0015 + phase) * 0.0003 - 0.00002 // Vertical sway + Slight Updraft
                     });
                 }
             });
