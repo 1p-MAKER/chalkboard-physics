@@ -299,7 +299,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     // Block size is 30, center to bottom is 15.
                     if (hitter.position.y > block.position.y + 10) {
                         const blockData = block as any;
-                        if (now - blockData.lastHitTime < 200) return; // Short Cooldown
+                        if (now - blockData.lastHitTime < 800) return; // Cooldown increased
 
                         // Fire!
                         blockData.lastHitTime = now;

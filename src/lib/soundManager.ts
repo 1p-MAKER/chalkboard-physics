@@ -5,6 +5,7 @@ export class SoundManager {
     private bgmOscillators: OscillatorNode[] = [];
     private bgmGain: GainNode | null = null;
     private isPlayingBGM: boolean = false;
+    private lastCoinTime: number = 0; // Debounce for coin sound
 
     constructor() {
         // Initialize on user interaction usually, but we prepare the class.
@@ -139,6 +140,10 @@ export class SoundManager {
 
     public playCoin() {
         if (this.isMuted) return;
+        const nowTime = Date.now();
+        if (nowTime - this.lastCoinTime < 100) return; // Debounce 100ms
+        this.lastCoinTime = nowTime;
+
         this.init();
         const ctx = this.ctx!;
 
