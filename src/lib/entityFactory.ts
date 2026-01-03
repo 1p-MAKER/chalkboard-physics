@@ -89,8 +89,8 @@ export function createBubbleEntity(x: number, y: number): MatterJS.Body {
     const bubble = MatterJS.Bodies.circle(x, y, 30, {
         restitution: 0.9,
         friction: 0.1,
-        frictionAir: 0.05, // 空気抵抗大
-        density: 0.0001, // 非常に軽い
+        frictionAir: 0.02, // 空気抵抗
+        density: 0.001, // 密度を標準に戻す
         collisionFilter: {
             category: CATEGORY_DYNAMIC,
             mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID
