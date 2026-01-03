@@ -193,49 +193,12 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     if (dist < 25) { // 衝突判定（小型化に合わせて調整）
                         (h as any).inBubble = true;
                         (b as any).containedEntity = h;
-                        (h as any).inBubble = true;
-                        (b as any).containedEntity = h;
                         h.collisionFilter.mask = 0x0001; // 地面(CATEGORY_DEFAULT)のみと衝突するように
                         soundManager.playPop(); // SE: Bubble Capture
                         break;
                     }
                 }
             });
-
-            // Question Block Logic
-            const blocks = bodies.filter(b => (b as any).isQuestionBlock);
-            if (blocks.length > 0) {
-                const now = Date.now();
-                const hitters = bodies.filter(b => !b.isStatic && !(b as any).isQuestionBlock && !(b as any).isCoin && !(b as any).isBubble);
-
-                blocks.forEach(block => {
-                    const blockData = block as any;
-                    if (now - blockData.lastHitTime < 500) return; // Cooldown
-
-                    for (const hitter of hitters) {
-                        // Check if hitter is below block and moving up
-                        if (hitter.position.y > block.position.y + 15 && hitter.velocity.y < -0.5) {
-                            // Check horizontal overlap
-                            if (Math.abs(hitter.position.x - block.position.x) < 25) {
-                                // Simple distance check for triggering
-                                const dist = Matter.Vector.magnitude(Matter.Vector.sub(hitter.position, block.position));
-                                if (dist < 40) {
-                                    // HIT!
-                                    blockData.lastHitTime = now;
-                                    soundManager.playCoin();
-
-                                    // Spawn Coin
-                                    const coin = createCoinEntity(block.position.x, block.position.y - 30);
-                                    Matter.Body.setVelocity(coin, { x: (Math.random() - 0.5) * 2, y: -10 }); // Pop up!
-                                    Matter.World.add(engine.world, coin);
-                                    entitiesRef.current.push(coin);
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                });
-            }
 
             // Clean up fallen coins
             const coins = bodies.filter(b => (b as any).isCoin);
@@ -489,7 +452,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     if ((body as any).isBubble && (body as any).containedEntity) {
                         soundManager.playBubblePop();
                     }
-                    World.remove(engine.world, body);
+                    Matter.World.remove(engine.world, body);
                     const idx = humanoidDataRef.current.findIndex(d => d.body === body);
                     if (idx > -1) humanoidDataRef.current.splice(idx, 1);
                     return false;
