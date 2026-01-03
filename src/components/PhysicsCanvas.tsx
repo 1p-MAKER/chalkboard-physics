@@ -673,8 +673,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         const width = canvasRef.current?.width || 800;
                         const height = canvasRef.current?.height || 600;
                         const randomX = width / 2 + (Math.random() - 0.5) * 400;
-                        // Spawn from bottom so it floats up
-                        const body = createBubbleEntity(randomX, height - 100);
+                        // 画面中央付近から出現
+                        const randomY = height / 2 + (Math.random() - 0.5) * 200;
+                        const body = createBubbleEntity(randomX, randomY);
                         Matter.World.add(engineRef.current!.world, body);
                         entitiesRef.current.push(body);
                         soundManager.playSpawn();
