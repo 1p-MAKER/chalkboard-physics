@@ -299,7 +299,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                     Matter.Body.applyForce(body, body.position, {
                         x: drift, // Constant horizontal drift
-                        y: Math.sin(time * 0.0015 + phase) * 0.0003 - 0.00002 // Vertical sway + Slight Updraft
+                        y: Math.sin(time * 0.001 + phase) * 0.00005 - 0.00002 // Reduced sway amplitude + slight updraft
                     });
                 }
             });

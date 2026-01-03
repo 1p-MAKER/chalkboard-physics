@@ -107,6 +107,10 @@ export function createBubbleEntity(x: number, y: number): MatterJS.Body {
     (bubble as any).bubbleCapacity = 1; // 1人まで入れる
     (bubble as any).containedEntity = null;
 
+    // Movement properties
+    (bubble as any).driftX = (Math.random() - 0.5) * 0.0002; // Very slow horizontal drift
+    (bubble as any).swayPhase = Math.random() * Math.PI * 2; // Random sway phase
+
     return bubble;
 }
 
