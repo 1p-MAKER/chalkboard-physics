@@ -180,6 +180,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             const humanoids = bodies.filter(b => (b as any).isHumanoid);
             const bubbles = bodies.filter(b => (b as any).isBubble);
 
+            // Note: Question Block Logic moved to collisionStart to avoid sticking/looping bugs
+
             // Bubble capture logic
             humanoids.forEach(h => {
                 if ((h as any).inBubble) return; // すでに中ならスキップ
@@ -301,6 +303,51 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         x: drift, // Constant horizontal drift
                         y: Math.sin(time * 0.001 + phase) * 0.00005 - 0.00002 // Reduced sway amplitude + slight updraft
                     });
+                }
+            });
+        });
+
+        // Collision Event for Question Blocks
+        Events.on(engine, 'collisionStart', (event) => {
+            const pairs = event.pairs;
+            const now = Date.now();
+
+            pairs.forEach(pair => {
+                const bodyA = pair.bodyA;
+                const bodyB = pair.bodyB;
+
+                // Check dependencies for QuestionBlock
+                let block: Matter.Body | null = null;
+                let hitter: Matter.Body | null = null;
+
+                if ((bodyA as any).isQuestionBlock) {
+                    block = bodyA;
+                    hitter = bodyB;
+                } else if ((bodyB as any).isQuestionBlock) {
+                    block = bodyB;
+                    hitter = bodyA;
+                }
+
+                if (block && hitter) {
+                    // Filter invalid hitters
+                    if (hitter.isStatic || (hitter as any).isCoin || (hitter as any).isBubble || (hitter as any).isQuestionBlock) return;
+
+                    // Condition: Hitter must be below the block
+                    // Block size is 30, center to bottom is 15.
+                    if (hitter.position.y > block.position.y + 10) {
+                        const blockData = block as any;
+                        if (now - blockData.lastHitTime < 200) return; // Short Cooldown
+
+                        // Fire!
+                        blockData.lastHitTime = now;
+                        soundManager.playCoin();
+
+                        // Spawn Coin
+                        const coin = createCoinEntity(block.position.x, block.position.y - 30);
+                        Matter.Body.setVelocity(coin, { x: (Math.random() - 0.5) * 2, y: -12 }); // Pop up higher
+                        Matter.World.add(engine.world, coin);
+                        entitiesRef.current.push(coin);
+                    }
                 }
             });
         });
