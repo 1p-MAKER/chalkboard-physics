@@ -70,7 +70,7 @@ export function createCloudEntity(x: number, y: number): MatterJS.Body {
             category: CATEGORY_DEFAULT,
             // Mouse(設定されていれば)で掴めるようにする
             // 現状のMouseConstraintはcollisionFilterを指定していない(default is all)のでOK
-            mask: CATEGORY_DYNAMIC | CATEGORY_HUMANOID
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID
         }
     });
 
