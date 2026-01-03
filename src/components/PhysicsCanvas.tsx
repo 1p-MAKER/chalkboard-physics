@@ -54,6 +54,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(false); // Default unmuted, but soundManager starts unmuted check internal state
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
     // Toggle Pause/Play
     const togglePause = () => {
@@ -718,8 +719,113 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     <button onClick={togglePause} style={btnStyle(!isPlaying)}>
                         {isPlaying ? '⏸️' : '▶️'}
                     </button>
+
+                    {/* Settings */}
+                    <button onClick={() => setIsSettingsOpen(true)} style={btnStyle(false)}>⚙️</button>
                 </div>
             </div>
+
+            {/* Settings Modal */}
+            {isSettingsOpen && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.6)',
+                    backdropFilter: 'blur(5px)',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 100
+                }}>
+                    <div style={{
+                        backgroundColor: '#ffffff',
+                        padding: '32px',
+                        borderRadius: '24px',
+                        width: '85%',
+                        maxWidth: '400px',
+                        boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                        position: 'relative'
+                    }}>
+                        <button
+                            onClick={() => setIsSettingsOpen(false)}
+                            style={{
+                                position: 'absolute',
+                                top: '16px',
+                                right: '16px',
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '24px',
+                                cursor: 'pointer',
+                                padding: '8px'
+                            }}
+                        >
+                            ✖️
+                        </button>
+
+                        <h2 style={{
+                            textAlign: 'center',
+                            marginTop: 0,
+                            marginBottom: '24px',
+                            color: '#333',
+                            fontSize: '24px'
+                        }}>設定</h2>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <a
+                                href="https://scented-zinc-a47.notion.site/2dd768aba03f808dbc25f635db9a636f"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'block',
+                                    padding: '16px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '12px',
+                                    textDecoration: 'none',
+                                    color: '#007AFF',
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    fontSize: '18px'
+                                }}
+                            >
+                                📖 説明書
+                            </a>
+                            <a
+                                href="https://scented-zinc-a47.notion.site/2dd768aba03f800d8295cbaea6c29805"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'block',
+                                    padding: '16px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '12px',
+                                    textDecoration: 'none',
+                                    color: '#007AFF',
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    fontSize: '16px',
+                                    lineHeight: '1.4'
+                                }}
+                            >
+                                📜 プライバシーポリシー<br />利用規約 / お問い合わせ
+                            </a>
+                        </div>
+
+                        <div style={{
+                            marginTop: '32px',
+                            textAlign: 'center',
+                            color: '#888',
+                            fontSize: '14px',
+                            borderTop: '1px solid #eee',
+                            paddingTop: '16px'
+                        }}>
+                            バージョン: 1.0.0
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style jsx>{`
                 div::-webkit-scrollbar { display: none; }
