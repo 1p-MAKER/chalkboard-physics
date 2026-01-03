@@ -680,6 +680,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>🫧</button>
 
+                    {/* Cloud */}
+                    <button onClick={() => {
+                        const width = canvasRef.current?.width || 800;
+                        const height = canvasRef.current?.height || 600;
+                        const randomX = width / 2 + (Math.random() - 0.5) * width;
+                        const randomY = Math.random() * (height / 3);
+                        const cloud = createCloudEntity(randomX, randomY);
+                        Matter.World.add(engineRef.current!.world, cloud);
+                        entitiesRef.current.push(cloud);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>☁️</button>
+
                     {/* Broom (Eraser Mode) */}
                     <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹</button>
 
