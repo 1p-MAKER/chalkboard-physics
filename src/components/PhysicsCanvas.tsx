@@ -17,6 +17,8 @@ import {
 } from '@/lib/entityFactory';
 import { soundManager } from '@/lib/soundManager';
 
+const CATEGORY_PLATEFORM = 0x0020;
+
 interface PhysicsCanvasProps {
     onClear: () => void;
 }
@@ -335,6 +337,14 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 (body as any).isOnLadderTop = isOnLadderTop;
                 data.isClimbing = isClimbing;
+
+                // Collision Filtering for Climbing through Platforms
+                const defaultMask = 0x0001 | 0x0002 | 0x0020; // DEFAULT | DYNAMIC | PLATEFORM
+                if (isClimbing && !isOnLadderTop) {
+                    body.collisionFilter.mask = defaultMask & ~CATEGORY_PLATEFORM;
+                } else {
+                    body.collisionFilter.mask = defaultMask;
+                }
 
                 if (isClimbing) {
                     Matter.Body.setAngle(body, 0);

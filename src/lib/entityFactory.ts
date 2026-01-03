@@ -4,6 +4,7 @@ const CATEGORY_DEFAULT = 0x0001; // 壁など（デフォルト）
 const CATEGORY_DYNAMIC = 0x0002; // ボールなど
 const CATEGORY_LADDER = 0x0004;  // ハシゴ
 const CATEGORY_HUMANOID = 0x0008; // 人型キャラクター
+const CATEGORY_PLATEFORM = 0x0020; // 浮遊足場（通り抜け制御用）
 
 /**
  * シンプルなキャラクター（エンティティ）を生成する
@@ -23,7 +24,7 @@ export function createEntity(x: number, y: number): MatterJS.Body {
         density: 0.001,
         collisionFilter: {
             category: CATEGORY_DYNAMIC,
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 全てと衝突
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_PLATEFORM // 全てと衝突
         },
         render: {
             fillStyle: color,
@@ -122,7 +123,7 @@ export function createHumanoidEntity(x: number, y: number): MatterJS.Body {
         inertia: Infinity, // 回転防止
         collisionFilter: {
             category: CATEGORY_HUMANOID,
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC // 壁・ボールとは衝突するが、他のHUMANOIDとは衝突しない
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_PLATEFORM // 壁・ボール・足場とは衝突
         },
         render: {
             fillStyle: 'transparent', // カスタムレンダリングで描画するため透明に
@@ -410,8 +411,8 @@ export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
         density: 0.01,    // 重めにして小人が乗っても安定させる
         inertia: Infinity, // 回転しない（無限の慣性モーメント）
         collisionFilter: {
-            category: CATEGORY_DEFAULT, // 普通の壁扱い
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER
+            category: CATEGORY_PLATEFORM, // 足場
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER | CATEGORY_PLATEFORM
         },
         render: {
             fillStyle: '#DEB887', // BurlyWood (木材)
@@ -442,8 +443,8 @@ export function createQuestionBlockEntity(x: number, y: number): MatterJS.Body {
         density: 0.01,
         inertia: Infinity,
         collisionFilter: {
-            category: CATEGORY_DEFAULT,
-            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER
+            category: CATEGORY_PLATEFORM,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_LADDER | CATEGORY_PLATEFORM
         },
         render: {
             fillStyle: '#FFD700', // Gold
