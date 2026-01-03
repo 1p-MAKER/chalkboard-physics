@@ -282,7 +282,7 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
     const parts = [];
     const filter = {
         category: CATEGORY_LADDER,
-        mask: CATEGORY_DEFAULT
+        mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_PLATEFORM
     };
 
     const topBarHeight = 5; // 8 -> 5
