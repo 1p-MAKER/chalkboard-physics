@@ -268,11 +268,11 @@ export function renderHumanoid(
  * 上部の当たり判定を完全に平らにする
  */
 export function createLadderEntity(x: number, y: number): MatterJS.Body {
-    const width = 60;
-    const height = 180;
-    const railWidth = 6;
-    const rungHeight = 5;
-    const rungCount = 6;
+    const width = 30; // 60 -> 30
+    const height = 90; // 180 -> 90
+    const railWidth = 4; // 6 -> 4
+    const rungHeight = 3; // 5 -> 3
+    const rungCount = 3; // 6 -> 3
 
     const parts = [];
     const filter = {
@@ -280,7 +280,7 @@ export function createLadderEntity(x: number, y: number): MatterJS.Body {
         mask: CATEGORY_DEFAULT
     };
 
-    const topBarHeight = 8; // 少し厚めにして安定させる
+    const topBarHeight = 5; // 8 -> 5
 
     // トップバー（一番上の平らな台）
     const topBar = MatterJS.Bodies.rectangle(x, y - height / 2 + topBarHeight / 2, width, topBarHeight, {

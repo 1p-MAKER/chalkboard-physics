@@ -234,7 +234,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         // Check if at the top (Virtual Floor)
                         // Ladder Top Y is bounds.min.y. Body H is 40 (center -20). 
                         // If body.y < min.y + 30, we consider them "on top" or "exiting".
-                        if (body.position.y < ladder.bounds.min.y + 30) {
+                        if (body.position.y < ladder.bounds.min.y + 20) {
                             isOnLadderTop = true;
                             // Allow walking on top
                             // We don't set isClimbing=true here, so the main walk logic below triggers!
