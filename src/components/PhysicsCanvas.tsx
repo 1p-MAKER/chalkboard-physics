@@ -207,11 +207,36 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 }
 
                 // Anti-gravity for floating objects (clouds, drawings, BUBBLES, LADDER TOP)
-                if ((body as any).isFloating || (body as any).isBubble || (body as any).isOnLadderTop) {
+                // Note: FixedFloating handles its own anti-gravity by forcing position
+                if (((body as any).isFloating && !(body as any).isFixedFloating) || (body as any).isBubble || (body as any).isOnLadderTop) {
                     Matter.Body.applyForce(body, body.position, {
                         x: 0,
                         y: -engine.gravity.y * engine.gravity.scale * body.mass
                     });
+                }
+
+                // Fixed Floating Logic (FloatingBar)
+                if ((body as any).isFixedFloating) {
+                    const isDragged = mouseConstraintRef.current?.body === body;
+
+                    if (isDragged) {
+                        // Update fixed position while dragging
+                        (body as any).fixedPosition = { x: body.position.x, y: body.position.y };
+                        // Apply Anti-gravity to make it light while dragging
+                        Matter.Body.applyForce(body, body.position, {
+                            x: 0,
+                            y: -engine.gravity.y * engine.gravity.scale * body.mass
+                        });
+                    } else {
+                        // Force position lock when not dragged
+                        // This makes it act like a static body but movable logic allows simple state switch
+                        const fixedPos = (body as any).fixedPosition;
+                        if (fixedPos) {
+                            Matter.Body.setPosition(body, fixedPos);
+                            Matter.Body.setVelocity(body, { x: 0, y: 0 });
+                            Matter.Body.setAngularVelocity(body, 0);
+                        }
+                    }
                 }
             });
         });
@@ -549,7 +574,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     }} style={btnStyle(false)}>🚶</button>
 
                     <button onClick={() => {
-                        const ladder = createLadderEntity((canvasRef.current?.width || 800) / 2, 200);
+                        const width = canvasRef.current?.width || 800;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 200; // Random X offset
+                        const ladder = createLadderEntity(randomX, 200);
                         Matter.World.add(engineRef.current!.world, ladder);
                         entitiesRef.current.push(ladder);
                         soundManager.playSpawn();
@@ -573,10 +600,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     }} style={btnStyle(false)}>⚽</button>
 
                     <button onClick={() => {
-                        const bar = createFloatingBarEntity(
-                            (canvasRef.current?.width || 800) / 2,
-                            (canvasRef.current?.height || 600) / 2
-                        );
+                        const width = canvasRef.current?.width || 800;
+                        const height = canvasRef.current?.height || 600;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 200; // Random X offset
+                        const bar = createFloatingBarEntity(randomX, height / 2);
                         Matter.World.add(engineRef.current!.world, bar);
                         entitiesRef.current.push(bar);
                         soundManager.playSpawn();

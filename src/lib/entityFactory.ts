@@ -423,6 +423,8 @@ export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
 
     // カスタムプロパティ：浮遊
     (bar as any).isFloating = true;
+    (bar as any).isFixedFloating = true; // 位置固定フラグ
+    (bar as any).fixedPosition = { x, y };
 
     return bar;
 }
