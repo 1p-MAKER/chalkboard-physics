@@ -811,6 +811,24 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                             >
                                 📜 プライバシーポリシー<br />利用規約 / お問い合わせ
                             </a>
+                            <a
+                                href="https://scented-zinc-a47.notion.site/2d2768aba03f8041bb12dc5e71a7ceb8?pvs=74"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                    display: 'block',
+                                    padding: '16px',
+                                    backgroundColor: '#f5f5f5',
+                                    borderRadius: '12px',
+                                    textDecoration: 'none',
+                                    color: '#007AFF',
+                                    fontWeight: 'bold',
+                                    textAlign: 'center',
+                                    fontSize: '18px'
+                                }}
+                            >
+                                📱 その他のアプリ
+                            </a>
                         </div>
 
                         <div style={{
