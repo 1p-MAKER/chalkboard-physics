@@ -48,14 +48,22 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
     // React State (UI only)
     const [cursorMode, setCursorMode] = useState<'draw' | 'grab' | 'eraser'>('draw');
-    const [isSpawning, setIsSpawning] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(false); // Default unmuted, but soundManager starts unmuted check internal state
 
-    // Toggle Spawning
-    const toggleSpawning = () => {
-        const newState = !isSpawning;
-        setIsSpawning(newState);
-        isSpawningRef.current = newState;
+    // Toggle Pause/Play
+    const togglePause = () => {
+        const newState = !isPlaying;
+        setIsPlaying(newState);
+        isSpawningRef.current = newState; // Reuse ref for Logic (renaming ref would require more changes, treating as 'isActive')
+
+        if (engineRef.current && runnerRef.current) {
+            if (newState) {
+                Matter.Runner.run(runnerRef.current, engineRef.current);
+            } else {
+                Matter.Runner.stop(runnerRef.current);
+            }
+        }
     };
 
     const toggleMute = () => {
@@ -209,6 +217,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
         // AI Tick
         const aiInterval = setInterval(() => {
+            if (!isSpawningRef.current) return; // Paused
             humanoidDataRef.current.forEach(data => {
                 const body = data.body;
                 if (!body.position || (body as any).inBubble) return; // 泡の中ならAI停止
@@ -271,7 +280,6 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 } else {
                     data.stuckCounter = 0;
                 }
-                data.legPhase += 0.2;
                 data.legPhase += 0.2;
 
                 // Footstep sound
@@ -526,8 +534,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     height: '100%',
                     alignItems: 'center'
                 }}>
-                    <button onClick={toggleSpawning} style={btnStyle(!isSpawning)}>
-                        {isSpawning ? '⏸️' : '▶️'}
+                    <button onClick={togglePause} style={btnStyle(!isPlaying)}>
+                        {isPlaying ? '⏸️' : '▶️'}
                     </button>
                     <button onClick={() => {
                         const width = canvasRef.current?.width || 800;
