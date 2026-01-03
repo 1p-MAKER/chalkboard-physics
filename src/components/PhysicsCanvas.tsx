@@ -560,6 +560,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         gap: '8px'
     });
 
+    // ツールボタン用（描画・手）: 小さく丸く
+    const toolBtnStyle = (active: boolean) => ({
+        ...btnStyle(active),
+        padding: '0',
+        width: '50px',
+        height: '50px',
+        borderRadius: '50%',
+        fontSize: '24px', // アイコン少し大きく
+    });
+
     return (
         <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
             <canvas
@@ -599,8 +609,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     flexShrink: 0, // 固定
                     backgroundColor: 'rgba(255,255,255,0.1)'
                 }}>
-                    <button onClick={() => setCursorMode('draw')} style={btnStyle(cursorMode === 'draw')}>✏️</button>
-                    <button onClick={() => setCursorMode('grab')} style={btnStyle(cursorMode === 'grab')}>✋</button>
+                    <button onClick={() => setCursorMode('draw')} style={toolBtnStyle(cursorMode === 'draw')}>✏️</button>
+                    <button onClick={() => setCursorMode('grab')} style={toolBtnStyle(cursorMode === 'grab')}>✋</button>
                 </div>
 
                 {/* Right: Scrollable Items */}
