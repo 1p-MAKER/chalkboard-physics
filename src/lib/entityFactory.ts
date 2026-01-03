@@ -111,8 +111,8 @@ export function createBubbleEntity(x: number, y: number): MatterJS.Body {
  * 1つの長方形として実装、カスタムレンダリングで可愛い人型に見せる
  */
 export function createHumanoidEntity(x: number, y: number): MatterJS.Body {
-    // 人型（1つの長方形）- さらに小さく可愛いサイズ (20x40)
-    const humanoid = MatterJS.Bodies.rectangle(x, y, 20, 40, {
+    // 人型（1つの長方形）- さらに小さく可愛いサイズ (20x34) - 身長削減
+    const humanoid = MatterJS.Bodies.rectangle(x, y, 20, 34, {
         restitution: 0.2,
         friction: 0.8,
         density: 0.002,
@@ -158,14 +158,14 @@ export function renderHumanoid(
         context.strokeStyle = '#333333';
         context.lineWidth = 1.5;
         context.beginPath();
-        context.roundRect(-6, -2, 12, 18, 6);
+        context.roundRect(-6, 2, 12, 16, 6); // 体の位置調整
         context.fill();
         context.stroke();
 
-        // 頭
+        // 頭（隙間をなくすために下げる）
         const headRadius = 8;
         context.beginPath();
-        context.arc(0, -14, headRadius, 0, Math.PI * 2);
+        context.arc(0, -5, headRadius, 0, Math.PI * 2); // -14 -> -5
         context.fill();
         context.stroke();
 
@@ -177,22 +177,22 @@ export function renderHumanoid(
         // 足
         context.beginPath();
         context.moveTo(-3, 15);
-        context.lineTo(-3, 22 - climbOffset);
+        context.lineTo(-3, 20 - climbOffset); // 長さ調整
         context.stroke();
         context.beginPath();
         context.moveTo(3, 15);
-        context.lineTo(3, 22 + climbOffset);
+        context.lineTo(3, 20 + climbOffset);
         context.stroke();
 
         // 手
         context.lineWidth = 2.5;
         context.beginPath();
-        context.moveTo(-6, 2);
-        context.lineTo(-9, -8 + climbOffset);
+        context.moveTo(-6, 0); // 付け根調整
+        context.lineTo(-9, -6 + climbOffset);
         context.stroke();
         context.beginPath();
-        context.moveTo(6, 2);
-        context.lineTo(9, -8 - climbOffset);
+        context.moveTo(6, 0);
+        context.lineTo(9, -6 - climbOffset);
         context.stroke();
 
     } else {
@@ -202,31 +202,31 @@ export function renderHumanoid(
         context.strokeStyle = '#333333';
         context.lineWidth = 1.5;
         context.beginPath();
-        context.roundRect(-6, -2, 12, 18, 6);
+        context.roundRect(-6, 2, 12, 16, 6); // 体の位置を下げる
         context.fill();
         context.stroke();
 
-        // 頭
+        // 頭（隙間をなくすために下げる）
         const headRadius = 8;
         context.beginPath();
-        context.arc(0, -14, headRadius, 0, Math.PI * 2);
+        context.arc(0, -5, headRadius, 0, Math.PI * 2); // -14 -> -5
         context.fill();
         context.stroke();
 
         // 目（より可愛く大きめに）
         context.fillStyle = '#333333';
         context.beginPath();
-        context.arc(-direction * 3, -15, 2, 0, Math.PI * 2);
+        context.arc(-direction * 3, -6, 2, 0, Math.PI * 2); // Y座標調整
         context.fill();
         context.beginPath();
-        context.arc(direction * 3, -15, 2, 0, Math.PI * 2);
+        context.arc(direction * 3, -6, 2, 0, Math.PI * 2);
         context.fill();
 
         // 笑顔
         context.strokeStyle = '#333333';
         context.lineWidth = 1;
         context.beginPath();
-        context.arc(0, -12, 4, 0.3, Math.PI - 0.3);
+        context.arc(0, -3, 4, 0.3, Math.PI - 0.3); // Y座標調整
         context.stroke();
 
         // 歩行
@@ -238,22 +238,22 @@ export function renderHumanoid(
         // 足
         context.beginPath();
         context.moveTo(-3, 15);
-        context.lineTo(-3 + leftLegOffset, 22);
+        context.lineTo(-3 + leftLegOffset, 20); // 長さ調整
         context.stroke();
         context.beginPath();
         context.moveTo(3, 15);
-        context.lineTo(3 + rightLegOffset, 22);
+        context.lineTo(3 + rightLegOffset, 20);
         context.stroke();
 
         // 手
         context.lineWidth = 2.5;
         context.beginPath();
-        context.moveTo(-6, 2);
-        context.lineTo(-9 - rightLegOffset, 8);
+        context.moveTo(-6, 4); // 付け根調整
+        context.lineTo(-9 - rightLegOffset, 10);
         context.stroke();
         context.beginPath();
-        context.moveTo(6, 2);
-        context.lineTo(9 - leftLegOffset, 8);
+        context.moveTo(6, 4);
+        context.lineTo(9 - leftLegOffset, 10);
         context.stroke();
     }
 
