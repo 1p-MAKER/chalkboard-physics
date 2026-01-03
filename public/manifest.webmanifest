@@ -1,4 +1,8 @@
 {
+  "name": "らくがきパレット",
+  "short_name": "らくパレ",
+  "display": "standalone",
+  "start_url": "/",
   "icons": [
     {
       "src": "../icons/icon-48.webp",
