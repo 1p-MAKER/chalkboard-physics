@@ -384,16 +384,16 @@ export function getHumanoidSpawnPosition(
     const fromLeft = Math.random() > 0.5;
 
     if (fromLeft) {
-        // 画面内の左側に直接スポーン
+        // 画面外の左側にスポーン（歩いて入ってくる）
         return {
-            x: 100, // 画面内
+            x: -30,
             y: canvasHeight - 150, // 地面から十分な高さ
             direction: 1 // 右向きに歩く
         };
     } else {
-        // 画面内の右側に直接スポーン
+        // 画面外の右側にスポーン
         return {
-            x: canvasWidth - 100, // 画面内
+            x: canvasWidth + 30,
             y: canvasHeight - 150, // 地面から十分な高さ
             direction: -1 // 左向きに歩く
         };
