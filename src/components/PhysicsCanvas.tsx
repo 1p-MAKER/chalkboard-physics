@@ -839,7 +839,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                             borderTop: '1px solid #eee',
                             paddingTop: '16px'
                         }}>
-                            バージョン: 1.0.0
+                            バージョン: 1.0.0 / 開発者: Dev Cat
                         </div>
                     </div>
                 </div>
