@@ -137,6 +137,30 @@ export class SoundManager {
         this.playPop(); // Reuse pop sound
     }
 
+    public playCoin() {
+        if (this.isMuted) return;
+        this.init();
+        const ctx = this.ctx!;
+
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        // Coin sound: Rapid high pitch arpeggio (B5 -> E6)
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(987.77, now); // B5
+        osc.frequency.linearRampToValueAtTime(1318.51, now + 0.1); // E6
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain!);
+
+        osc.start(now);
+        osc.stop(now + 0.5);
+    }
+
     // --- BGM ---
     // Simple looping ambient melody
     public startBGM() {

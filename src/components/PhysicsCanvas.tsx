@@ -142,6 +142,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             entitiesRef.current.push(bubble);
         }
 
+        // Try to start BGM if allowed
+        if (!isMuted) soundManager.startBGM();
+
         // Mouse/Touch Constraint for 'Grab' mode
         const mouse = Mouse.create(render.canvas);
         const mouseConstraint = MouseConstraint.create(engine, {
@@ -192,6 +195,49 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         soundManager.playPop(); // SE: Bubble Capture
                         break;
                     }
+                }
+            });
+
+            // Question Block Logic
+            const blocks = bodies.filter(b => (b as any).isQuestionBlock);
+            if (blocks.length > 0) {
+                const now = Date.now();
+                const hitters = bodies.filter(b => !b.isStatic && !(b as any).isQuestionBlock && !(b as any).isCoin && !(b as any).isBubble);
+
+                blocks.forEach(block => {
+                    const blockData = block as any;
+                    if (now - blockData.lastHitTime < 500) return; // Cooldown
+
+                    for (const hitter of hitters) {
+                        // Check if hitter is below block and moving up
+                        if (hitter.position.y > block.position.y + 15 && hitter.velocity.y < -0.5) {
+                            // Check horizontal overlap
+                            if (Math.abs(hitter.position.x - block.position.x) < 25) {
+                                // Simple distance check for triggering
+                                const dist = Matter.Vector.magnitude(Matter.Vector.sub(hitter.position, block.position));
+                                if (dist < 40) {
+                                    // HIT!
+                                    blockData.lastHitTime = now;
+                                    soundManager.playCoin();
+
+                                    // Spawn Coin
+                                    const coin = createCoinEntity(block.position.x, block.position.y - 30);
+                                    Matter.Body.setVelocity(coin, { x: (Math.random() - 0.5) * 2, y: -10 }); // Pop up!
+                                    Matter.World.add(engine.world, coin);
+                                    entitiesRef.current.push(coin);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Clean up fallen coins
+            const coins = bodies.filter(b => (b as any).isCoin);
+            coins.forEach(c => {
+                if (c.position.y > engine.world.bounds.max.y + 100) {
+                    Matter.World.remove(engine.world, c);
                 }
             });
 
