@@ -768,10 +768,28 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         <h2 style={{
                             textAlign: 'center',
                             marginTop: 0,
-                            marginBottom: '24px',
+                            marginBottom: '16px',
                             color: '#333',
                             fontSize: '24px'
                         }}>設定</h2>
+
+                        <div style={{
+                            backgroundColor: '#F0F7FF',
+                            padding: '16px',
+                            borderRadius: '16px',
+                            marginBottom: '24px',
+                            fontSize: '14px',
+                            lineHeight: '1.6',
+                            color: '#444',
+                            border: '1px solid #D0E5FF'
+                        }}>
+                            <strong>🎨 遊び方ガイド</strong><br />
+                            ・<strong>✏️描く</strong>：チョークで自由に道や形を作れます。<br />
+                            ・<strong>✋掴む</strong>：描いた物や雲を動かせます。<br />
+                            ・<strong>🚶小人</strong>：自動で歩きます。ハシゴも登れます。<br />
+                            ・<strong>🫧泡</strong>：小人を包み込んで空へ運びます。<br />
+                            ・<strong>🪄消す</strong>：掃除機（🧹）で消せます。
+                        </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                             <a
