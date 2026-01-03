@@ -434,7 +434,7 @@ export function createFloatingBarEntity(x: number, y: number): MatterJS.Body {
  * 下から叩くとコインが出る
  */
 export function createQuestionBlockEntity(x: number, y: number): MatterJS.Body {
-    const size = 40;
+    const size = 30; // 40 -> 30
     const block = MatterJS.Bodies.rectangle(x, y, size, size, {
         restitution: 0.2,
         friction: 0.8,

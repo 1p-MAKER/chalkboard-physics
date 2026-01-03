@@ -63,8 +63,10 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         if (engineRef.current && runnerRef.current) {
             if (newState) {
                 Matter.Runner.run(runnerRef.current, engineRef.current);
+                if (!isMuted) soundManager.startBGM();
             } else {
                 Matter.Runner.stop(runnerRef.current);
+                soundManager.stopBGM();
             }
         }
     };
