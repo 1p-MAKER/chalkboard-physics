@@ -189,7 +189,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     if ((b as any).containedEntity) continue; // 満員ならスキップ
 
                     const dist = Matter.Vector.magnitude(Matter.Vector.sub(h.position, b.position));
-                    if (dist < 25) { // 衝突判定（小型化に合わせて調整）
+                    if (dist < 45) { // 衝突判定（半径30+小人約15=45で接触）
                         (h as any).inBubble = true;
                         (b as any).containedEntity = h;
                         h.collisionFilter.mask = 0x0001; // 地面(CATEGORY_DEFAULT)のみと衝突するように
