@@ -67,7 +67,9 @@ export function createCloudEntity(x: number, y: number): MatterJS.Body {
         },
         collisionFilter: {
             category: CATEGORY_DEFAULT,
-            mask: CATEGORY_DYNAMIC | CATEGORY_HUMANOID // 壁扱い
+            // Mouse(設定されていれば)で掴めるようにする
+            // 現状のMouseConstraintはcollisionFilterを指定していない(default is all)のでOK
+            mask: CATEGORY_DYNAMIC | CATEGORY_HUMANOID
         }
     });
 
@@ -82,7 +84,8 @@ export function createCloudEntity(x: number, y: number): MatterJS.Body {
  * ふわふわと上昇する
  */
 export function createBubbleEntity(x: number, y: number): MatterJS.Body {
-    const bubble = MatterJS.Bodies.circle(x, y, 15, {
+    // 泡を大きくする (15 -> 30)
+    const bubble = MatterJS.Bodies.circle(x, y, 30, {
         restitution: 0.9,
         friction: 0.1,
         frictionAir: 0.05, // 空気抵抗大
