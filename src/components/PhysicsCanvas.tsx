@@ -15,6 +15,8 @@ import {
     renderHumanoid
 } from '@/lib/entityFactory';
 import { soundManager } from '@/lib/soundManager';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 const CATEGORY_PLATEFORM = 0x0020;
 
@@ -699,6 +701,35 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                     {/* Trash (Clear All) */}
                     <button onClick={handleClear} style={btnStyle(false)}>🗑️</button>
+
+                    {/* Screenshot */}
+                    <button onClick={async () => {
+                        if (!canvasRef.current) return;
+                        soundManager.playSpawn(); // シャッター音代わり
+
+                        try {
+                            // 1. Canvasを画像データ(Base64)に変換
+                            const image = canvasRef.current.toDataURL('image/png');
+                            const base64Data = image.split(',')[1];
+                            const fileName = `rakugaki_${new Date().getTime()}.png`;
+
+                            // 2. キャッシュディレクトリに一時保存
+                            const result = await Filesystem.writeFile({
+                                path: fileName,
+                                data: base64Data,
+                                directory: Directory.Cache
+                            });
+
+                            // 3. 共有シートを開く
+                            await Share.share({
+                                files: [result.uri],
+                                title: 'らくがきパレット',
+                                text: '見て！私が描いた世界だよ！ #らくがきパレット'
+                            });
+                        } catch (error) {
+                            console.error('Screenshot failed:', error);
+                        }
+                    }} style={btnStyle(false)}>📷</button>
 
                     {/* Volume */}
                     <button
