@@ -242,7 +242,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             const context = render.context;
             if (!context) return;
             humanoidDataRef.current.forEach(data => {
-                renderHumanoid(context, data.body, data.legPhase, data.direction, data.isClimbing || false);
+                renderHumanoid(context, data.body, data.legPhase, data.direction, data.isClimbing || (data as any).hangingCounter > 0);
             });
         });
 
@@ -501,6 +501,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         y: -engine.gravity.y * engine.gravity.scale * body.mass
                     });
 
+                    data.legPhase += 0.2; // Animate legs while hanging
                     return; // Skip walking logic
                 }
 
