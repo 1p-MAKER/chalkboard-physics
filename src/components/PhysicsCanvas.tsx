@@ -19,6 +19,10 @@ import {
 import { soundManager } from '@/lib/soundManager';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { Preferences } from '@capacitor/preferences';
+import { AlbumImage } from './AlbumImage';
+
+const ALBUM_STORAGE_KEY = 'sakuhin_album';
 
 const CATEGORY_PLATEFORM = 0x0020;
 
@@ -59,6 +63,70 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(false); // Default unmuted, but soundManager starts unmuted check internal state
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isAlbumOpen, setIsAlbumOpen] = useState(false);
+    const [albumImages, setAlbumImages] = useState<string[]>([]);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+    // Load Album
+    useEffect(() => {
+        const loadAlbum = async () => {
+            const { value } = await Preferences.get({ key: ALBUM_STORAGE_KEY });
+            if (value) {
+                setAlbumImages(JSON.parse(value));
+            }
+        };
+        loadAlbum();
+    }, []);
+
+    const saveToAlbum = async (base64Data: string) => {
+        const fileName = `sakuhin_${new Date().getTime()}.jpg`;
+        try {
+            await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Data
+            });
+            const newAlbum = [fileName, ...albumImages];
+            setAlbumImages(newAlbum);
+            await Preferences.set({ key: ALBUM_STORAGE_KEY, value: JSON.stringify(newAlbum) });
+            alert('アルバムに保存しました！'); // Simple toast replacement
+        } catch (e) {
+            console.error('Save failed', e);
+            alert('保存に失敗しました');
+        }
+    };
+
+    const deleteFromAlbum = async (fileName: string) => {
+        try {
+            await Filesystem.deleteFile({
+                path: fileName,
+                directory: Directory.Data
+            });
+            const newAlbum = albumImages.filter(f => f !== fileName);
+            setAlbumImages(newAlbum);
+            await Preferences.set({ key: ALBUM_STORAGE_KEY, value: JSON.stringify(newAlbum) });
+            if (selectedImage === fileName) setSelectedImage(null);
+        } catch (e) {
+            console.error('Delete failed', e);
+        }
+    };
+
+    const shareImage = async (fileName: string) => {
+        try {
+            const result = await Filesystem.getUri({
+                path: fileName,
+                directory: Directory.Data
+            });
+            await Share.share({
+                title: 'らくがきパレットの作品',
+                text: '見て見て！',
+                url: result.uri,
+                dialogTitle: '作品を共有'
+            });
+        } catch (e) {
+            console.error('Share failed', e);
+        }
+    };
 
     // Toggle Pause/Play
     const togglePause = () => {
@@ -580,13 +648,18 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 // Cloud Rain Trigger
                 if (parent.label === 'Cloud') {
-                    soundManager.playSpawn(); // Use spawn sound for rain trigger for now
+                    if ((parent as any).hasRainedThisClick) return; // Prevent multiple spawns per click
+                    (parent as any).hasRainedThisClick = true;
+                    // Reset flag after short delay
+                    setTimeout(() => { (parent as any).hasRainedThisClick = false; }, 500);
+
+                    soundManager.playSpawn(); // Use spawn sound for rain trigger
                     // Spawn Rain
                     for (let i = 0; i < 8; i++) {
-                        const rx = parent.position.x + (Math.random() * 60 - 30);
-                        const ry = parent.position.y + 20;
+                        const rx = parent.position.x + (Math.random() * 80 - 40); // Wider spawn
+                        const ry = parent.position.y + 30; // Spawn slightly lower
                         const drop = createRainDropEntity(rx, ry);
-                        Matter.Body.setVelocity(drop, { x: (Math.random() - 0.5), y: 5 }); // Initial downward velocity
+                        Matter.Body.setVelocity(drop, { x: (Math.random() - 0.5) * 2, y: 5 + Math.random() * 5 });
                         entitiesRef.current.push(drop);
                         Matter.World.add(engineRef.current!.world, drop);
                     }
@@ -845,34 +918,23 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     {/* Trash (Clear All) */}
                     <button onClick={handleClear} style={btnStyle(false)}>🗑️</button>
 
-                    {/* Screenshot */}
+                    {/* Screenshot (Save to Album) */}
                     <button onClick={async () => {
                         if (!canvasRef.current) return;
-                        soundManager.playSpawn(); // シャッター音代わり
+                        soundManager.playSpawn(); // Click sound
 
                         try {
-                            // 1. Canvasを画像データ(Base64)に変換
-                            const image = canvasRef.current.toDataURL('image/png');
+                            // Use standard toDataURL for compatibility
+                            const image = canvasRef.current.toDataURL('image/jpeg', 0.8);
                             const base64Data = image.split(',')[1];
-                            const fileName = `rakugaki_${new Date().getTime()}.png`;
-
-                            // 2. キャッシュディレクトリに一時保存
-                            const result = await Filesystem.writeFile({
-                                path: fileName,
-                                data: base64Data,
-                                directory: Directory.Cache
-                            });
-
-                            // 3. 共有シートを開く
-                            await Share.share({
-                                files: [result.uri],
-                                title: 'らくがきパレット',
-                                text: '見て！私が描いた世界だよ！ #らくがきパレット'
-                            });
-                        } catch (error) {
-                            console.error('Screenshot failed:', error);
+                            await saveToAlbum(base64Data);
+                        } catch (e) {
+                            console.error('Screenshot failed', e);
                         }
                     }} style={btnStyle(false)}>📷</button>
+
+                    {/* Album Button */}
+                    <button onClick={() => setIsAlbumOpen(true)} style={btnStyle(false)}>🖼️</button>
 
                     {/* Volume */}
                     <button
@@ -1040,6 +1102,45 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             <style jsx>{`
                 div::-webkit-scrollbar { display: none; }
             `}</style>
+            {/* Album Modal */}
+            {isAlbumOpen && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                    backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 101, // Higher than toolbar
+                    display: 'flex', flexDirection: 'column'
+                }}>
+                    <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
+                        <h2 style={{ margin: 0 }}>アルバム</h2>
+                        <button onClick={() => { setIsAlbumOpen(false); setSelectedImage(null); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '24px' }}>✕</button>
+                    </div>
+
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '10px' }}>
+                        {!selectedImage ? (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                                {albumImages.map((img) => (
+                                    <div key={img} onClick={() => setSelectedImage(img)} style={{ aspectRatio: '1', backgroundColor: '#333', borderRadius: '8px', overflow: 'hidden' }}>
+                                        <AlbumImage fileName={img} style={{ width: '100%', height: '100%' }} />
+                                    </div>
+                                ))}
+                                {albumImages.length === 0 && <p style={{ color: '#ccc', textAlign: 'center', gridColumn: 'span 3' }}>写真がありません</p>}
+                            </div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+                                <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '10px' }}>
+                                    <AlbumImage fileName={selectedImage} style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: '8px' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-around', padding: '20px' }}>
+                                    <button onClick={() => shareImage(selectedImage)} style={{ ...btnStyle(true), width: '40%' }}>共有する</button>
+                                    <button onClick={() => deleteFromAlbum(selectedImage)} style={{ ...btnStyle(false), backgroundColor: '#ff4444', color: 'white', width: '40%', borderColor: '#cc0000' }}>削除する</button>
+                                </div>
+                                <div style={{ textAlign: 'center', paddingBottom: '20px' }}>
+                                    <button onClick={() => setSelectedImage(null)} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '16px' }}>一覧に戻る</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

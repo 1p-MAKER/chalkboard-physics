@@ -15,6 +15,7 @@
     "@capacitor/core": "^8.0.0",
     "@capacitor/filesystem": "^8.0.0",
     "@capacitor/ios": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
     "@capacitor/share": "^8.0.0",
     "@types/matter-js": "^0.20.2",
     "i18next": "^25.7.3",
