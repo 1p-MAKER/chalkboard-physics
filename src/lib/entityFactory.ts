@@ -493,3 +493,27 @@ export function createCoinEntity(x: number, y: number): MatterJS.Body {
 
     return coin;
 }
+
+/**
+ * 雨粒（エンティティ）を生成する
+ * 小さくて重い青い円
+ */
+export function createRainDropEntity(x: number, y: number): MatterJS.Body {
+    const radius = 3;
+    const drop = MatterJS.Bodies.circle(x, y, radius, {
+        restitution: 0.2, // あまり跳ねない
+        friction: 0,      // 滑りやすい
+        frictionAir: 0.01,
+        density: 0.05,    // 重くして速く落とす
+        render: {
+            fillStyle: '#4169E1', // RoyalBlue
+            strokeStyle: 'none'
+        },
+        label: 'RainDrop',
+        collisionFilter: {
+            category: CATEGORY_DYNAMIC,
+            mask: CATEGORY_DEFAULT | CATEGORY_LADDER | CATEGORY_PLATEFORM // 人やボールにはあまり干渉しない方が良いかもだが、とりあえず地面に当たる
+        }
+    });
+    return drop;
+}

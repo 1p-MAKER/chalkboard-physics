@@ -12,7 +12,8 @@ import {
 
     getRandomSpawnPosition,
     getHumanoidSpawnPosition,
-    renderHumanoid
+    renderHumanoid,
+    createRainDropEntity
 } from '@/lib/entityFactory';
 import { soundManager } from '@/lib/soundManager';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -252,6 +253,27 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     }
                 }
 
+                // Disappearing Lines Logic (60s lifetime)
+                if ((body as any).isLine && (body as any).createdAt) {
+                    const age = Date.now() - (body as any).createdAt;
+                    if (age > 60000) {
+                        Matter.World.remove(engine.world, body);
+                        wallsRef.current = wallsRef.current.filter(w => w !== body);
+                        // Optional: Play vanish sound?
+                    } else if (age > 55000) {
+                        // Blink effect (simple opacity toggle or similar if render supports it, 
+                        // but standard render doesn't support easy dynamic opacity change per body without custom render.
+                        // We'll skip visual blinking for now to keep it simple or implement custom render loop later.)
+                    }
+                }
+
+                // Rain Drop Logic (Teardown)
+                if (body.label === 'RainDrop') {
+                    if (body.position.y > 800) { // Below screen assumption
+                        Matter.World.remove(engine.world, body);
+                    }
+                }
+
                 // Bubble Sway logic
                 if ((body as any).isBubble) {
                     const time = engine.timing.timestamp;
@@ -462,7 +484,30 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
         } else if (cursorMode === 'draw') {
             isDrawingRef.current = true;
             lastPointRef.current = { x, y };
+        } else {
+            // Check for Cloud Click (Rain)
+            const bodies = Matter.Composite.allBodies(engineRef.current.world);
+            const hits = Matter.Query.point(bodies, { x, y });
+            hits.forEach(b => {
+                // Find parent body in case we hit a part
+                const parent = (b as any).parent || b;
+
+                // Cloud Rain Trigger
+                if (parent.label === 'Cloud') {
+                    soundManager.playSpawn(); // Use spawn sound for rain trigger for now
+                    // Spawn Rain
+                    for (let i = 0; i < 8; i++) {
+                        const rx = parent.position.x + (Math.random() * 60 - 30);
+                        const ry = parent.position.y + 20;
+                        const drop = createRainDropEntity(rx, ry);
+                        Matter.Body.setVelocity(drop, { x: (Math.random() - 0.5), y: 5 }); // Initial downward velocity
+                        entitiesRef.current.push(drop);
+                        Matter.World.add(engineRef.current!.world, drop);
+                    }
+                }
+            });
         }
+
     };
 
     const handlePointerMove = (e: React.PointerEvent) => {
@@ -506,6 +551,8 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 restitution: 0.1
             });
             (compound as any).isFloating = true;
+            (compound as any).isLine = true;
+            (compound as any).createdAt = Date.now();
             Matter.World.add(engineRef.current.world, compound);
             wallsRef.current.push(compound); // Eligible for eraser
             currentStrokeBodiesRef.current = [];
