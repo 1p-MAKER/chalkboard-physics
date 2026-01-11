@@ -357,52 +357,54 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 // Roulette Spin & Result Logic
                 if ((body as any).isRoulette && (body as any).isSpinning) {
-                    (body as any).spinTimer--;
-                    // Flash effect
-                    if ((body as any).spinTimer % 5 === 0) {
-                        body.render.fillStyle = Math.random() > 0.5 ? '#FFD700' : '#D3D3D3';
+                    const roulette = body as any;
+                    roulette.spinTimer--;
+
+                    // Flashing Windows logic
+                    if (roulette.spinTimer % 5 === 0) {
+                        const colors = ['#FF0000', '#0000FF', '#00FF00', '#FFFF00'];
+                        if (roulette.windowL) roulette.windowL.render.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+                        if (roulette.windowR) roulette.windowR.render.fillStyle = colors[Math.floor(Math.random() * colors.length)];
                     }
 
-                    if ((body as any).spinTimer <= 0) {
-                        (body as any).isSpinning = false;
-                        // Result (20% Win)
-                        if (Math.random() < 0.2) {
+                    if (roulette.spinTimer <= 0) {
+                        roulette.isSpinning = false;
+                        const colorL = roulette.windowL?.render.fillStyle;
+                        const colorR = roulette.windowR?.render.fillStyle;
+
+                        if (colorL === colorR) {
                             // WIN
-                            body.render.fillStyle = '#FFD700'; // Gold
-                            soundManager.playSpawn(); // Use spawn sound as Win
-                            // Spawn Balls Logic
-                            for (let i = 0; i < 20; i++) {
-                                const b = createEntity(body.position.x + (Math.random() * 40 - 20), -50 - Math.random() * 200);
-                                Matter.Body.setVelocity(b, { x: (Math.random() - 0.5) * 5, y: 0 });
+                            const frame = roulette.parts.find((p: any) => p !== roulette.windowL && p !== roulette.windowR && p.label !== 'Roulette' || p === roulette); // p===roulette if compound parent? accessing parts...
+                            // Actually, parts[0] is usually parent if not set otherwise, but here frame is a part.
+                            // Let's just iterate parts and set non-windows to Gold.
+                            roulette.parts.forEach((p: any) => {
+                                if (p !== roulette.windowL && p !== roulette.windowR) {
+                                    p.render.fillStyle = '#FFD700';
+                                }
+                            });
+
+                            soundManager.playSpawn();
+                            // Spawn Balls
+                            for (let i = 0; i < 30; i++) {
+                                const b = createEntity(body.position.x + (Math.random() * 60 - 30), body.position.y - 100);
+                                Matter.Body.setVelocity(b, { x: (Math.random() - 0.5) * 8, y: -5 - Math.random() * 10 });
                                 Matter.World.add(engine.world, b);
                                 entitiesRef.current.push(b);
                             }
                         } else {
                             // LOSE
-                            body.render.fillStyle = '#696969'; // Dim Gray
+                            roulette.parts.forEach((p: any) => {
+                                if (p !== roulette.windowL && p !== roulette.windowR) {
+                                    p.render.fillStyle = '#444444';
+                                }
+                            });
                         }
                     }
                 }
             });
         });
 
-        // Collision Event for Roulette Trigger
-        Events.on(engine, 'collisionStart', (event) => {
-            event.pairs.forEach(pair => {
-                const { bodyA, bodyB } = pair;
-                [bodyA, bodyB].forEach(b => {
-                    if ((b as any).isRoulette && !(b as any).isSpinning) {
-                        // Check if hit by Humanoid or Ball or anything dynamic (but not ground/walls)
-                        const other = b === bodyA ? bodyB : bodyA;
-                        if (!other.isStatic && other.label !== 'RainDrop') { // Don't trigger by Rain or Static
-                            (b as any).isSpinning = true;
-                            (b as any).spinTimer = 180; // 3 seconds
-                            soundManager.playSpawn();
-                        }
-                    }
-                });
-            });
-        });
+
 
 
 
@@ -645,6 +647,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
             hits.forEach(b => {
                 // Find parent body in case we hit a part
                 const parent = (b as any).parent || b;
+
+                // Roulette Spin Logic (Tap to Spin)
+                if (parent.label === 'Roulette') {
+                    if (!(parent as any).isSpinning) {
+                        (parent as any).isSpinning = true;
+                        (parent as any).spinTimer = 180; // 3 seconds
+                        soundManager.playSpawn();
+                    }
+                    return;
+                }
 
                 // Cloud Rain Trigger
                 if (parent.label === 'Cloud') {
@@ -904,6 +916,12 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                     {/* Roulette */}
                     <button onClick={() => {
+                        const existing = entitiesRef.current.find(b => b.label === 'Roulette');
+                        if (existing) {
+                            alert('ルーレットは世界に1つだけです！');
+                            return;
+                        }
+
                         const width = canvasRef.current?.width || 800;
                         const randomX = width / 2 + (Math.random() - 0.5) * 300;
                         const roulette = createRouletteEntity(randomX, 200);

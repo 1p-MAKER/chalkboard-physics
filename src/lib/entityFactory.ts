@@ -519,21 +519,35 @@ export function createRainDropEntity(x: number, y: number): MatterJS.Body {
 }
 
 /**
- * ルーレットアイテムを生成する
- * 四角い箱。当たると回転する。
+ * ルーレットアイテムを生成する（改善版）
+ * 正方形に2つの窓がついた複合ボディ。
  */
 export function createRouletteEntity(x: number, y: number): MatterJS.Body {
-    const size = 60; // 少し大きめ
-    const box = MatterJS.Bodies.rectangle(x, y, size, size, {
-        restitution: 0.5,
+    const size = 60;
+
+    // Main Frame
+    const frame = MatterJS.Bodies.rectangle(x, y, size, size, {
+        render: { fillStyle: '#696969', strokeStyle: '#000000', lineWidth: 2 }
+    });
+
+    // Windows (Sensors/Display parts)
+    const windowW = 20;
+    const windowH = 30;
+    // Window L (offset -15)
+    const windowL = MatterJS.Bodies.rectangle(x - 15, y, windowW, windowH, {
+        render: { fillStyle: '#FFFFFF' }
+    });
+    // Window R (offset +15)
+    const windowR = MatterJS.Bodies.rectangle(x + 15, y, windowW, windowH, {
+        render: { fillStyle: '#FFFFFF' }
+    });
+
+    const body = MatterJS.Body.create({
+        parts: [frame, windowL, windowR],
         friction: 0.5,
+        restitution: 0.5,
         frictionAir: 0.01,
         density: 0.002,
-        render: {
-            fillStyle: '#FFD700', // Gold
-            strokeStyle: '#000000',
-            lineWidth: 2,
-        },
         label: 'Roulette',
         collisionFilter: {
             category: CATEGORY_DYNAMIC,
@@ -542,9 +556,11 @@ export function createRouletteEntity(x: number, y: number): MatterJS.Body {
     });
 
     // Custom properties
-    (box as any).isRoulette = true;
-    (box as any).isSpinning = false;
-    (box as any).spinTimer = 0;
+    (body as any).isRoulette = true;
+    (body as any).isSpinning = false;
+    (body as any).spinTimer = 0;
+    (body as any).windowL = windowL;
+    (body as any).windowR = windowR;
 
-    return box;
+    return body;
 }
