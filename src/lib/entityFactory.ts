@@ -517,3 +517,34 @@ export function createRainDropEntity(x: number, y: number): MatterJS.Body {
     });
     return drop;
 }
+
+/**
+ * ルーレットアイテムを生成する
+ * 四角い箱。当たると回転する。
+ */
+export function createRouletteEntity(x: number, y: number): MatterJS.Body {
+    const size = 60; // 少し大きめ
+    const box = MatterJS.Bodies.rectangle(x, y, size, size, {
+        restitution: 0.5,
+        friction: 0.5,
+        frictionAir: 0.01,
+        density: 0.002,
+        render: {
+            fillStyle: '#FFD700', // Gold
+            strokeStyle: '#000000',
+            lineWidth: 2,
+        },
+        label: 'Roulette',
+        collisionFilter: {
+            category: CATEGORY_DYNAMIC,
+            mask: CATEGORY_DEFAULT | CATEGORY_DYNAMIC | CATEGORY_HUMANOID | CATEGORY_PLATEFORM
+        }
+    });
+
+    // Custom properties
+    (box as any).isRoulette = true;
+    (box as any).isSpinning = false;
+    (box as any).spinTimer = 0;
+
+    return box;
+}

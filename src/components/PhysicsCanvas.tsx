@@ -13,7 +13,8 @@ import {
     getRandomSpawnPosition,
     getHumanoidSpawnPosition,
     renderHumanoid,
-    createRainDropEntity
+    createRainDropEntity,
+    createRouletteEntity
 } from '@/lib/entityFactory';
 import { soundManager } from '@/lib/soundManager';
 import { Filesystem, Directory } from '@capacitor/filesystem';
@@ -285,6 +286,53 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         y: Math.sin(time * 0.001 + phase) * 0.00005 - 0.00002 // Reduced sway amplitude + slight updraft
                     });
                 }
+
+                // Roulette Spin & Result Logic
+                if ((body as any).isRoulette && (body as any).isSpinning) {
+                    (body as any).spinTimer--;
+                    // Flash effect
+                    if ((body as any).spinTimer % 5 === 0) {
+                        body.render.fillStyle = Math.random() > 0.5 ? '#FFD700' : '#D3D3D3';
+                    }
+
+                    if ((body as any).spinTimer <= 0) {
+                        (body as any).isSpinning = false;
+                        // Result (20% Win)
+                        if (Math.random() < 0.2) {
+                            // WIN
+                            body.render.fillStyle = '#FFD700'; // Gold
+                            soundManager.playSpawn(); // Use spawn sound as Win
+                            // Spawn Balls Logic
+                            for (let i = 0; i < 20; i++) {
+                                const b = createEntity(body.position.x + (Math.random() * 40 - 20), -50 - Math.random() * 200);
+                                Matter.Body.setVelocity(b, { x: (Math.random() - 0.5) * 5, y: 0 });
+                                Matter.World.add(engine.world, b);
+                                entitiesRef.current.push(b);
+                            }
+                        } else {
+                            // LOSE
+                            body.render.fillStyle = '#696969'; // Dim Gray
+                        }
+                    }
+                }
+            });
+        });
+
+        // Collision Event for Roulette Trigger
+        Events.on(engine, 'collisionStart', (event) => {
+            event.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+                [bodyA, bodyB].forEach(b => {
+                    if ((b as any).isRoulette && !(b as any).isSpinning) {
+                        // Check if hit by Humanoid or Ball or anything dynamic (but not ground/walls)
+                        const other = b === bodyA ? bodyB : bodyA;
+                        if (!other.isStatic && other.label !== 'RainDrop') { // Don't trigger by Rain or Static
+                            (b as any).isSpinning = true;
+                            (b as any).spinTimer = 180; // 3 seconds
+                            soundManager.playSpawn();
+                        }
+                    }
+                });
             });
         });
 
@@ -299,6 +347,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
 
                 // Ladder logic
                 let isClimbing = false;
+                let isHanging = false;
                 let isOnLadderTop = false;
                 const ladders = entitiesRef.current.filter(e => e.label === 'Ladder');
 
@@ -346,6 +395,43 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 if (isClimbing) {
                     Matter.Body.setAngle(body, 0);
                     return;
+                }
+
+                // Hanging Logic (Grab Drawn Lines)
+                // Initialize counter if missing
+                if (typeof (data as any).hangingCounter === 'undefined') {
+                    (data as any).hangingCounter = 0;
+                }
+
+                const touchingWalls = Query.point(wallsRef.current, { x: body.position.x + data.direction * 15, y: body.position.y - 10 });
+
+                // Start Hanging (only if falling or jumping, not walking on ground)
+                if ((data as any).hangingCounter === 0 && touchingWalls.length > 0 && Math.abs(body.velocity.y) > 1) {
+                    // 20% chance to grab
+                    if (Math.random() < 0.2) {
+                        (data as any).hangingCounter = 30 + Math.floor(Math.random() * 30); // 3-6 seconds (since tick is 100ms)
+                        soundManager.playSpawn(); // Grab sound (reusing spawn for now)
+                        Matter.Body.setVelocity(body, { x: 0, y: 0 });
+                    }
+                }
+
+                // Process Hanging
+                if ((data as any).hangingCounter > 0) {
+                    (data as any).hangingCounter--;
+                    isHanging = true;
+                    // Anti-gravity and Hold
+                    Matter.Body.setVelocity(body, { x: 0, y: 0 }); // Stop movement
+                    Matter.Body.setAngle(body, 0);
+                    // Apply Anti-gravity (in beforeUpdate is general, but here we enforce static-like behavior per tick)
+                    // We rely on beforeUpdate's general anti-gravity? No, that's only for floating bodies.
+                    // We must manually cancel gravity here or set static. Setting static is risky for dynamic switches.
+                    // Apply force equal to gravity
+                    Matter.Body.applyForce(body, body.position, {
+                        x: 0,
+                        y: -engine.gravity.y * engine.gravity.scale * body.mass
+                    });
+
+                    return; // Skip walking logic
                 }
 
                 // Walk logic
@@ -406,7 +492,7 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                     const body = createHumanoidEntity(spawn.x, spawn.y);
                     World.add(engine.world, body);
                     entitiesRef.current.push(body);
-                    humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0 });
+                    humanoidDataRef.current.push({ body, direction: spawn.direction, legPhase: 0, stuckCounter: 0, hangingCounter: 0 } as any);
                     soundManager.playSpawn(); // SE: Spawn
 
                 } else {
@@ -742,6 +828,16 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                         entitiesRef.current.push(cloud);
                         soundManager.playSpawn();
                     }} style={btnStyle(false)}>☁️</button>
+
+                    {/* Roulette */}
+                    <button onClick={() => {
+                        const width = canvasRef.current?.width || 800;
+                        const randomX = width / 2 + (Math.random() - 0.5) * 300;
+                        const roulette = createRouletteEntity(randomX, 200);
+                        Matter.World.add(engineRef.current!.world, roulette);
+                        entitiesRef.current.push(roulette);
+                        soundManager.playSpawn();
+                    }} style={btnStyle(false)}>🎰</button>
 
                     {/* Broom (Eraser Mode) */}
                     <button onClick={() => setCursorMode('eraser')} style={btnStyle(cursorMode === 'eraser')}>🧹</button>
