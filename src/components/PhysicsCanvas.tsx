@@ -403,6 +403,32 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 }
             });
         });
+        // Collision Event for Hanging (Grab)
+        Matter.Events.on(engine, 'collisionStart', (event) => {
+            event.pairs.forEach(pair => {
+                const { bodyA, bodyB } = pair;
+
+                let humanoid: Matter.Body | null = null;
+                let wall: Matter.Body | null = null;
+
+                if ((bodyA as any).isHumanoid) humanoid = bodyA;
+                else if ((bodyB as any).isHumanoid) humanoid = bodyB;
+
+                if ((bodyA as any).isLine) wall = bodyA;
+                else if ((bodyB as any).isLine) wall = bodyB;
+
+                if (humanoid && wall) {
+                    if ((humanoid as any).hangingCounter === 0 && (humanoid as any).isClimbing === false) {
+                        // Only grab if falling (velocity.y > 0) to avoid weird bounces from jumping
+                        if (Math.random() < 0.3 && humanoid.velocity.y > 0) {
+                            (humanoid as any).hangingCounter = 30 + Math.floor(Math.random() * 30);
+                            soundManager.playSpawn();
+                            Matter.Body.setVelocity(humanoid, { x: 0, y: 0 });
+                        }
+                    }
+                }
+            });
+        });
 
 
 
@@ -468,21 +494,9 @@ const PhysicsCanvas: React.FC<PhysicsCanvasProps> = ({ onClear }) => {
                 }
 
                 // Hanging Logic (Grab Drawn Lines)
-                // Initialize counter if missing
+                // Now handled in collisionStart for instant response
                 if (typeof (data as any).hangingCounter === 'undefined') {
                     (data as any).hangingCounter = 0;
-                }
-
-                const touchingWalls = Query.point(wallsRef.current, { x: body.position.x + data.direction * 15, y: body.position.y - 10 });
-
-                // Start Hanging (only if falling or jumping, not walking on ground)
-                if ((data as any).hangingCounter === 0 && touchingWalls.length > 0 && Math.abs(body.velocity.y) > 1) {
-                    // 20% chance to grab
-                    if (Math.random() < 0.2) {
-                        (data as any).hangingCounter = 30 + Math.floor(Math.random() * 30); // 3-6 seconds (since tick is 100ms)
-                        soundManager.playSpawn(); // Grab sound (reusing spawn for now)
-                        Matter.Body.setVelocity(body, { x: 0, y: 0 });
-                    }
                 }
 
                 // Process Hanging
